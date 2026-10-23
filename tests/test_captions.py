@@ -1,7 +1,15 @@
 import pytest
 from helpers import load_fixture
 
-from video_to_rag.captions import CaptionTrack, NoCaptions, Segment, parse_json3, select_track
+from video_to_rag.captions import (
+    CaptionTrack,
+    NoCaptions,
+    Segment,
+    Video,
+    parse_json3,
+    select_track,
+    video_from_info,
+)
 
 
 def json3_url(info, container, key):
@@ -127,3 +135,30 @@ def test_parse_event_without_duration_ends_at_next_start():
         ]
     }
     assert parse_json3(data) == [Segment(1.0, 2.5, "one"), Segment(2.5, 3.0, "two")]
+
+
+# --- Video metadata ----------------------------------------------------------------------
+
+
+def test_metadata_from_info():
+    info = load_fixture("info_auto_only.json")
+    assert video_from_info(info, select_track(info)) == Video(
+        id="auto0nly_EN",
+        title="Using Cold Exposure for Health",
+        channel_id="UC2D2CMWXMOVWx7giW1n3LIg",
+        channel_name="Huberman Lab",
+        published="2023-10-02",
+        duration_s=9011,
+        language="en",
+        caption_kind="auto",
+    )
+
+
+def test_metadata_falls_back_to_uploader_and_timestamp():
+    info = load_fixture("info_manual_and_auto.json")
+    for key in ("channel", "channel_id", "upload_date"):
+        del info[key]
+    info.update(uploader_id="@hubermanlab", timestamp=1710115200)  # 2024-03-11 00:00 UTC
+    video = video_from_info(info, select_track(info))
+    assert (video.channel_name, video.channel_id) == ("Andrew Huberman", "@hubermanlab")
+    assert video.published == "2024-03-11"

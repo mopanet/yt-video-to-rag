@@ -1,7 +1,8 @@
-"""Caption track selection and json3 -> timestamped segments (pure)."""
+"""Caption track selection, video metadata and json3 -> timestamped segments (pure)."""
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 ANNOTATION_RE = re.compile(r"\[[^\]]*\]")
 WHITESPACE_RE = re.compile(r"\s+")
@@ -22,8 +23,47 @@ class Segment:
     text: str
 
 
+@dataclass(frozen=True)
+class Video:
+    id: str
+    title: str
+    channel_id: str
+    channel_name: str
+    published: str | None  # YYYY-MM-DD
+    duration_s: float | None
+    language: str
+    caption_kind: str
+
+
+@dataclass(frozen=True)
+class Transcript:
+    video: Video
+    segments: list[Segment]
+
+
 class NoCaptions(Exception):
     """The video has no caption track in its spoken language."""
+
+
+def _published(info: dict) -> str | None:
+    if (date := info.get("upload_date")) and len(date) == 8:
+        return f"{date[:4]}-{date[4:6]}-{date[6:]}"
+    if (ts := info.get("timestamp")) is not None:
+        return datetime.fromtimestamp(ts, UTC).strftime("%Y-%m-%d")
+    return None
+
+
+def video_from_info(info: dict, track: CaptionTrack) -> Video:
+    return Video(
+        id=info["id"],
+        title=info.get("title") or info["id"],
+        channel_id=info.get("channel_id") or info.get("uploader_id") or "",
+        channel_name=info.get("channel") or info.get("uploader") or "",
+        published=_published(info),
+        duration_s=info.get("duration"),
+        language=track.language,
+        caption_kind=track.kind,
+    )
 
 
 def base_language(code: str | None) -> str | None:

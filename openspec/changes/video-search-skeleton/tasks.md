@@ -41,16 +41,16 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 4. YouTube access and credential hygiene (`redact.py`, `youtube.py`)
 
-- [ ] 4.1 Tests first for `redact()` (user:pass masked, URLs without credentials untouched,
+- [x] 4.1 Tests first for `redact()` (user:pass masked, URLs without credentials untouched,
   several URLs in one message); implement; verify `uv run pytest tests/test_redact.py` passes
-- [ ] 4.2 Tests first for spec *Network access modes* (direct, browser cookies, cookie file,
+- [x] 4.2 Tests first for spec *Network access modes* (direct, browser cookies, cookie file,
   proxy from `VIDEO_TO_RAG_PROXY`) asserting the options handed to an injected `YoutubeDL`
   factory, and that the proxy is not accepted as a CLI argument; implement the adapter (design D3);
   verify `uv run pytest tests/test_youtube.py -k mode` passes
-- [ ] 4.3 Tests first for spec *Actionable block error* (direct; with cookies → expiry hint),
+- [x] 4.3 Tests first for spec *Actionable block error* (direct; with cookies → expiry hint),
   *Unavailable video* (private) and *Proxy failure message is masked*, using recorded error
   strings; implement the error mapping (design D12); verify `uv run pytest tests/test_youtube.py -k error` passes
-- [ ] 4.4 Tests first for spec *JavaScript runtime warning* (deno preferred, node fallback, none →
+- [x] 4.4 Tests first for spec *JavaScript runtime warning* (deno preferred, node fallback, none →
   warning and still attempts); check the installed yt-dlp's option for enabling a runtime and
   implement detection; verify `uv run pytest tests/test_youtube.py -k runtime` passes
 
