@@ -1,0 +1,27 @@
+{
+  "_comment": "SYNTHETIC: trimmed yt-dlp info dict built from documented fields; replace with a real `yt-dlp -J` dump after the first live run.",
+  "id": "deutsch_DE1",
+  "title": "Besser schlafen",
+  "channel": "Wissen Kompakt",
+  "channel_id": "UCwissenKompakt000000000",
+  "uploader": "Wissen Kompakt",
+  "upload_date": "20250105",
+  "duration": 1830,
+  "language": null,
+  "webpage_url": "https://www.youtube.com/watch?v=deutsch_DE1",
+  "subtitles": {},
+  "automatic_captions": {
+    "de-orig": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=deutsch_DE1&kind=asr&lang=de&fmt=json3", "name": "German (Original)"}
+    ],
+    "de": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=deutsch_DE1&kind=asr&lang=de&fmt=json3", "name": "German"}
+    ],
+    "en": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=deutsch_DE1&kind=asr&lang=de&tlang=en&fmt=json3", "name": "English"}
+    ],
+    "hu": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=deutsch_DE1&kind=asr&lang=de&tlang=hu&fmt=json3", "name": "Hungarian"}
+    ]
+  }
+}

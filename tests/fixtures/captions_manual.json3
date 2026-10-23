@@ -1,0 +1,13 @@
+{
+  "_comment": "SYNTHETIC json3 (uploader-provided captions): one event per caption line, no overlap, multi-line text.",
+  "wireMagic": "pb3",
+  "pens": [{}],
+  "wsWinStyles": [{}],
+  "wpWinPositions": [{}],
+  "events": [
+    {"tStartMs": 1200, "dDurationMs": 3300, "segs": [{"utf8": "Welcome to the Huberman Lab podcast,"}]},
+    {"tStartMs": 4500, "dDurationMs": 4100, "segs": [{"utf8": "where we discuss science\nand science-based tools"}]},
+    {"tStartMs": 8600, "dDurationMs": 2900, "segs": [{"utf8": "for everyday life."}]},
+    {"tStartMs": 12000, "dDurationMs": 5200, "segs": [{"utf8": "Today we talk about focus."}]}
+  ]
+}

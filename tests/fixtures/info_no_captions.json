@@ -1,0 +1,18 @@
+{
+  "_comment": "SYNTHETIC: an English video whose only caption track is a French upload; no track in the spoken language.",
+  "id": "noCaps_0001",
+  "title": "Silent Lab Walkthrough",
+  "channel": "Huberman Lab",
+  "channel_id": "UC2D2CMWXMOVWx7giW1n3LIg",
+  "uploader": "Andrew Huberman",
+  "upload_date": "20220620",
+  "duration": 312,
+  "language": "en",
+  "webpage_url": "https://www.youtube.com/watch?v=noCaps_0001",
+  "subtitles": {
+    "fr": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=noCaps_0001&lang=fr&fmt=json3", "name": "French"}
+    ]
+  },
+  "automatic_captions": {}
+}

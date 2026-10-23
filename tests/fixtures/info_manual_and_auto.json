@@ -1,0 +1,36 @@
+{
+  "_comment": "SYNTHETIC: trimmed yt-dlp info dict built from documented fields; replace with a real `yt-dlp -J` dump after the first live run.",
+  "id": "abc123DEF45",
+  "title": "Optimizing Focus and Productivity",
+  "channel": "Huberman Lab",
+  "channel_id": "UC2D2CMWXMOVWx7giW1n3LIg",
+  "uploader": "Andrew Huberman",
+  "upload_date": "20240311",
+  "duration": 7342,
+  "language": "en",
+  "webpage_url": "https://www.youtube.com/watch?v=abc123DEF45",
+  "subtitles": {
+    "en": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&lang=en&fmt=json3", "name": "English"},
+      {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&lang=en&fmt=vtt", "name": "English"}
+    ],
+    "live_chat": [
+      {"ext": "json", "url": "https://www.youtube.com/watch?v=abc123DEF45", "protocol": "youtube_live_chat_replay"}
+    ]
+  },
+  "automatic_captions": {
+    "en-orig": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&kind=asr&lang=en&fmt=json3", "name": "English (Original)"},
+      {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&kind=asr&lang=en&fmt=vtt", "name": "English (Original)"}
+    ],
+    "en": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&kind=asr&lang=en&fmt=json3", "name": "English"}
+    ],
+    "de": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&kind=asr&lang=en&tlang=de&fmt=json3", "name": "German"}
+    ],
+    "hu": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=abc123DEF45&kind=asr&lang=en&tlang=hu&fmt=json3", "name": "Hungarian"}
+    ]
+  }
+}

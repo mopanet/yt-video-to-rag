@@ -29,13 +29,13 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 3. Captions (`captions.py`)
 
-- [ ] 3.1 Build synthetic fixtures in `tests/fixtures/` (yt-dlp info dicts with `subtitles` /
+- [x] 3.1 Build synthetic fixtures in `tests/fixtures/` (yt-dlp info dicts with `subtitles` /
   `automatic_captions` incl. `-orig` and translated tracks; json3 files with `[Music]`, `aAppend`
   events and overlapping ASR timings); verify fixtures load in a smoke test
-- [ ] 3.2 Tests first for spec *Caption track selection* (manual preferred, automatic fallback,
+- [x] 3.2 Tests first for spec *Caption track selection* (manual preferred, automatic fallback,
   no translated track, spoken language missing from metadata) and *No usable captions*; implement
   selection per design D4; verify `uv run pytest tests/test_captions.py -k select` passes
-- [ ] 3.3 Tests first for spec *Timestamped transcript segments* (annotations stripped, empty
+- [x] 3.3 Tests first for spec *Timestamped transcript segments* (annotations stripped, empty
   segments dropped, end clamped to next start); implement json3 parsing; verify
   `uv run pytest tests/test_captions.py -k parse` passes
 

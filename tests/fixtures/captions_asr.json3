@@ -1,0 +1,21 @@
+{
+  "_comment": "SYNTHETIC json3 (automatic captions): window-definition event without segs, [Music] / [Applause] annotations, aAppend line-break events and overlapping ASR timings.",
+  "wireMagic": "pb3",
+  "pens": [{}],
+  "wsWinStyles": [{}, {"mhModeHint": 2, "juJustifCode": 0, "sdScrollDir": 3}],
+  "wpWinPositions": [{}, {"apPoint": 6, "ahHorPos": 20, "avVerPos": 100, "rcRows": 2, "ccCols": 40}],
+  "events": [
+    {"tStartMs": 0, "dDurationMs": 1200000, "id": 1, "wpWinPosId": 1, "wsWinStyleId": 1},
+    {"tStartMs": 0, "dDurationMs": 4000, "wWinId": 1, "segs": [{"utf8": "[Music]"}]},
+    {"tStartMs": 4000, "dDurationMs": 4880, "wWinId": 1, "segs": [{"utf8": "[Applause]"}, {"utf8": " so", "tOffsetMs": 480, "acAsrConf": 0}, {"utf8": " let's", "tOffsetMs": 800, "acAsrConf": 0}, {"utf8": " begin", "tOffsetMs": 1120, "acAsrConf": 0}]},
+    {"tStartMs": 6150, "dDurationMs": 2730, "wWinId": 1, "aAppend": 1, "segs": [{"utf8": "\n"}]},
+    {"tStartMs": 6160, "dDurationMs": 5040, "wWinId": 1, "segs": [{"utf8": "welcome"}, {"utf8": " to", "tOffsetMs": 240, "acAsrConf": 0}, {"utf8": " the", "tOffsetMs": 400, "acAsrConf": 0}, {"utf8": " Huberman", "tOffsetMs": 560, "acAsrConf": 0}, {"utf8": " Lab", "tOffsetMs": 1000, "acAsrConf": 0}, {"utf8": " podcast", "tOffsetMs": 1280, "acAsrConf": 0}]},
+    {"tStartMs": 8870, "dDurationMs": 2330, "wWinId": 1, "aAppend": 1, "segs": [{"utf8": "\n"}]},
+    {"tStartMs": 8880, "dDurationMs": 4400, "wWinId": 1, "segs": [{"utf8": "where"}, {"utf8": " we", "tOffsetMs": 200, "acAsrConf": 0}, {"utf8": " discuss", "tOffsetMs": 360, "acAsrConf": 0}, {"utf8": " science", "tOffsetMs": 800, "acAsrConf": 0}]},
+    {"tStartMs": 11190, "dDurationMs": 2090, "wWinId": 1, "aAppend": 1, "segs": [{"utf8": "\n"}]},
+    {"tStartMs": 11200, "dDurationMs": 3000, "wWinId": 1, "segs": [{"utf8": "[Music]"}]},
+    {"tStartMs": 13280, "dDurationMs": 3600, "wWinId": 1, "segs": [{"utf8": "and"}, {"utf8": "  science-based", "tOffsetMs": 320, "acAsrConf": 0}, {"utf8": " tools", "tOffsetMs": 900, "acAsrConf": 0}]},
+    {"tStartMs": 16880, "dDurationMs": 2400, "wWinId": 1, "segs": [{"utf8": " "}]},
+    {"tStartMs": 17000, "dDurationMs": 3100, "wWinId": 1, "segs": [{"utf8": "for"}, {"utf8": " everyday", "tOffsetMs": 300, "acAsrConf": 0}, {"utf8": " life", "tOffsetMs": 800, "acAsrConf": 0}]}
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "_comment": "SYNTHETIC: trimmed yt-dlp info dict built from documented fields; replace with a real `yt-dlp -J` dump after the first live run.",
+  "id": "auto0nly_EN",
+  "title": "Using Cold Exposure for Health",
+  "channel": "Huberman Lab",
+  "channel_id": "UC2D2CMWXMOVWx7giW1n3LIg",
+  "uploader": "Andrew Huberman",
+  "upload_date": "20231002",
+  "duration": 9011,
+  "language": "en-US",
+  "webpage_url": "https://www.youtube.com/watch?v=auto0nly_EN",
+  "subtitles": {},
+  "automatic_captions": {
+    "en-orig": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=auto0nly_EN&kind=asr&lang=en&fmt=json3", "name": "English (Original)"}
+    ],
+    "en": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=auto0nly_EN&kind=asr&lang=en&fmt=json3", "name": "English"}
+    ],
+    "de": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=auto0nly_EN&kind=asr&lang=en&tlang=de&fmt=json3", "name": "German"}
+    ],
+    "hu": [
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?v=auto0nly_EN&kind=asr&lang=en&tlang=hu&fmt=json3", "name": "Hungarian"}
+    ]
+  }
+}
