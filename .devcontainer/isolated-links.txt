@@ -1,0 +1,21 @@
+# isolated-links.txt — extra files/folders that `devup --isolated` LINKS from the
+# main repo into the fresh worktree (one path per line, relative to the repo root).
+#
+# Why: `git worktree add` only brings in TRACKED files. Gitignored runtime things
+# (env, node_modules, build cache, service-account json…) would be missing, so the
+# environment would not run. devup links them to the main repo with absolute
+# symlinks — thanks to the path-mirror mount they resolve inside the container too.
+#
+# Linked BY DEFAULT (even without this file): .env, .env.local, .env.*.local
+#
+# node_modules — two options:
+#   • SHARED (fast): add `node_modules` here. One install, every worktree uses
+#     it. WARNING: if the isolated agent runs `npm install`, it writes the
+#     SHARED node_modules → not fully isolated.
+#   • ISOLATED (safe): do NOT link it; run `npm ci` once in the container
+#     (slower, but the worktree gets its own clean dependencies).
+#
+# Examples (remove the # if needed):
+# node_modules
+# .next/cache
+# config/service-account.json

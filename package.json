@@ -1,0 +1,22 @@
+{
+  "name": "video-to-rag",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "test:cov": "node --test --experimental-test-coverage",
+    "test:affected": "node scripts/affected-tests.mjs --run",
+    "check": "biome check src test",
+    "check:affected": "node scripts/affected-tests.mjs --lint",
+    "format": "biome check --write src test",
+    "preflight": "test -z \"$(git status --porcelain)\" && echo 'working tree clean' || { echo 'working tree NOT clean — commit / git stash / git restore before proposing a new feature'; git status --short; exit 1; }",
+    "secrets": "gitleaks dir . --no-banner --redact",
+    "gates:dev": "npm run check:affected && npm run test:affected",
+    "gates": "npm run check && npm test && npm run secrets && openspec validate --all"
+  }
+}

@@ -1,0 +1,41 @@
+name: gates
+
+# Machine gates behind the protected main: runs the same as `npm run gates`
+# locally — Biome (lint+format), tests, gitleaks, OpenSpec validate.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks needs the full history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install gate tools
+        run: |
+          npm install -g @biomejs/biome @fission-ai/openspec
+          GL_VER=8.24.3
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VER}/gitleaks_${GL_VER}_linux_x64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin/ gitleaks
+
+      - name: Install deps (if any)
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+
+      - name: Run gates
+        run: npm run gates
+
+      - name: Secret scan (full history)
+        run: gitleaks git . --no-banner --redact

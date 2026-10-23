@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm run test:cov)",
+      "Bash(npm run check)",
+      "Bash(npm run format)",
+      "Bash(npm run secrets)",
+      "Bash(npm run gates:dev)",
+      "Bash(npm run test:affected)",
+      "Bash(npm run gates)",
+      "Bash(npm run preflight)",
+      "Bash(node --test)",
+      "Bash(node --test --experimental-test-coverage)",
+      "Bash(openspec:*)",
+      "Edit(openspec/**)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status)",
+      "Bash(git status --short)",
+      "Bash(git stash:*)",
+      "Bash(git worktree prune)",
+      "Bash(git diff:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git switch:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

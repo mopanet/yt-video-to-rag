@@ -1,0 +1,15 @@
+# tailscale-hosts.txt — tailnet hosts this container may SSH into (one per line).
+# Empty (only comments) = Tailscale is OFF for this project. This file is READ-ONLY
+# inside the container: the agent cannot add hosts for itself.
+#
+# Turn it on (all on the HOST):
+#   1. Tailscale admin → Settings → Keys → auth key: Reusable + Ephemeral, short expiry.
+#      Save it once for every project:  ts-set
+#   2. On the target server:  tailscale up --ssh   (Tailscale SSH serves port 22)
+#   3. List the server below (MagicDNS name, full *.ts.net name or 100.x IP), then:
+#      devup --rebuild
+# In the container:  ssh deploy@vps1 …   (only listed hosts, only port 22)
+# Human approval: give the target a Tailscale SSH rule with "action": "check" —
+# see docs/MANUAL.md in dev-template.
+#
+# vps1

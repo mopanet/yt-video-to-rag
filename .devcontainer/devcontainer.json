@@ -1,0 +1,51 @@
+{
+  "name": "agentic-dev-sandbox",
+  "image": "ghcr.io/mopanet/agentic-dev:latest",
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW",
+    "--add-host=host.docker.internal:host-gateway"
+  ],
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "NPM_CONFIG_IGNORE_SCRIPTS": "true",
+    "NPM_CONFIG_AUDIT": "true",
+    "NPM_CONFIG_SAVE_EXACT": "true",
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+    "PIP_NO_COMPILE": "1"
+  },
+  "remoteEnv": {
+    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}",
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  },
+  "mounts": [
+    "source=claude-container-config,target=/home/node/.claude,type=volume",
+    "source=codex-container-config,target=/home/node/.codex,type=volume",
+    "source=${localEnv:HOME}/.claude/commands,target=/home/node/.claude/commands,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/skills,target=/home/node/.claude/skills,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/agents,target=/home/node/.claude/agents,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/CLAUDE.md,target=/home/node/.claude/CLAUDE.md,type=bind,readonly",
+    "source=${localEnv:HOME}/.codex/AGENTS.md,target=/home/node/.codex/AGENTS.md,type=bind,readonly",
+    "source=${localEnv:HOME}/gstack,target=${localEnv:HOME}/gstack,type=bind,readonly",
+    "source=${localEnv:HOME}/.config/dev-pats,target=/home/node/.config/dev-pats,type=bind,readonly",
+    "source=${localEnv:HOME}/.config/dev-tailscale,target=/etc/dev-tailscale/k,type=bind,readonly",
+    "source=${localEnv:HOME}/.config/dev-proxy${localWorkspaceFolder},target=/etc/dev-proxy/k,type=bind,readonly",
+    "source=agent-browser-${localWorkspaceFolderBasename}-${devcontainerId},target=/var/lib/agent-browser,type=volume",
+    "source=commandhistory,target=/commandhistory,type=volume",
+    "source=npm-cache-${localWorkspaceFolderBasename},target=/home/node/.npm,type=volume",
+    "source=${localEnv:HOME}/.local/state/devup-status,target=/run/devup-status,type=bind",
+    "source=${localWorkspaceFolder}/.devcontainer,target=/workspaces/${localWorkspaceFolderBasename}/.devcontainer,type=bind,readonly",
+    "source=${localWorkspaceFolder}/.devcontainer,target=/workspace/.devcontainer,type=bind,readonly"
+  ],
+  "remoteUser": "node",
+  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh && { /usr/local/bin/setup-git-pat.sh || true; }",
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && { sudo /usr/local/bin/dev-tailscale up ${localWorkspaceFolderBasename} || true; } && { sudo /usr/local/bin/agent-browser up || true; } && { npm install -g --ignore-scripts=false @anthropic-ai/claude-code@latest || true; } && { npm install -g --ignore-scripts=false @openai/codex@latest || true; } && { /usr/local/bin/setup-statusline.sh || true; }",
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  }
+}

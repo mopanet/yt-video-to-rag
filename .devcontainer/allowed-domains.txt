@@ -1,0 +1,17 @@
+# Container network settings (one entry per line). READ-ONLY inside the container.
+# Change it here (on the HOST), then in the container: fw-reload
+#
+# Default: open internet; private networks + cloud metadata closed; every DNS lookup logged
+#   (devup egress-log on the host). A host listed here is allowed even if private,
+#   e.g.  host.docker.internal
+# Sensitive project — allowlist only (baseline: Anthropic, OpenAI, npm, GitHub, Bitbucket,
+#   PyPI + the hosts listed here):  strict-egress
+# Inbound dev ports: ingress-port:<container port>. devup publishes each one on a loopback
+#   host port of its own (the same number when free) and prints the localhost URL; a new or
+#   changed line takes effect with  devup --rebuild.  3000 (the web dev server) is on by default.
+# Agent browser view (agent-browser.json "view_port", default 6080): ingress-port:6080
+#   — nothing listens there outside `agent-browser view`.
+#
+# example-api.com
+
+ingress-port:3000
