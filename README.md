@@ -10,9 +10,12 @@ you approve at **GATE 1**, build with tests, one review, PR) or **T2** (large/ri
 OpenSpec loop with TDD, triple review and a **GATE 2** go-live approval). You never run
 npm/git/tests by hand.
 
+Toolchain: Python 3.12 via [uv](https://docs.astral.sh/uv/), pytest, Ruff; the npm scripts are
+the task runner.
+
 ```bash
-npm test          # run the scenario tests
-npm run gates     # check + test + secret-scan + openspec validate
+npm test          # run the scenario tests (pytest)
+npm run gates     # Ruff check + test + secret-scan + openspec validate
 ```
 
 Start a slice — T1 (default): just describe it; T2 (large/risky):

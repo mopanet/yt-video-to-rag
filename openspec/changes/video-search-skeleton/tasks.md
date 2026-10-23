@@ -5,20 +5,20 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 1. Python toolchain (commit: `chore:`)
 
-- [ ] 1.1 Create `pyproject.toml` (uv, `src/` layout, package `video_to_rag`, console script
+- [x] 1.1 Create `pyproject.toml` (uv, `src/` layout, package `video_to_rag`, console script
   `video-to-rag`, `requires-python >= 3.11`, deps `yt-dlp[default]`, `fastembed`, `sqlite-vec`,
   `mcp`, `platformdirs`; dev deps `pytest`, `pytest-cov`, `ruff`; pytest marker `model`), add
   `.python-version` (3.12) and `uv.lock`; verify `uv sync` succeeds and `uv run video-to-rag --help` prints usage
-- [ ] 1.2 Port `scripts/affected-tests.mjs` to `scripts/affected_tests.py` (same change-set rules,
+- [x] 1.2 Port `scripts/affected-tests.mjs` to `scripts/affected_tests.py` (same change-set rules,
   `ast`-based direct-import mapping, `--run` → pytest, `--lint` → Ruff on changed `.py` files);
   test-first in `tests/test_affected_tests.py` against a temporary git repo; verify those tests pass
-- [ ] 1.3 Rewire `package.json` scripts per design D1, delete `biome.json`,
+- [x] 1.3 Rewire `package.json` scripts per design D1, delete `biome.json`,
   `scripts/affected-tests.mjs` and `test/setup.test.js`, extend `.gitignore` (`.venv/`,
   `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.coverage`, `*.sqlite3`); verify
   `npm run gates` is green on the empty package
 - [ ] 1.4 Update `.github/workflows/gates.yml` (setup-uv, `uv sync --frozen`, Biome removed,
   `-m "not model"`); verify the CI run on the PR is green
-- [ ] 1.5 Update the toolchain lines in `.dev/guide.md`, `.dev/CONTRIBUTING.md` and `README.md`
+- [x] 1.5 Update the toolchain lines in `.dev/guide.md`, `.dev/CONTRIBUTING.md` and `README.md`
   (node:test/Biome → pytest/Ruff, commands unchanged); verify `grep -rn "node:test\|Biome\|biome" .dev README.md` finds no stale mention
 
 ## 2. Video URL input (`urls.py`)

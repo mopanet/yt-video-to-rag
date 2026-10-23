@@ -1,19 +1,19 @@
 {
   "name": "video-to-rag",
   "version": "0.0.0",
-  "description": "",
-  "type": "module",
+  "description": "Task runner for the Python project (uv, Ruff, pytest); the workflow entry points stay npm run …",
+  "private": true,
   "license": "MIT",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test",
-    "test:cov": "node --test --experimental-test-coverage",
-    "test:affected": "node scripts/affected-tests.mjs --run",
-    "check": "biome check src test",
-    "check:affected": "node scripts/affected-tests.mjs --lint",
-    "format": "biome check --write src test",
+    "test": "uv run pytest",
+    "test:cov": "uv run pytest --cov=video_to_rag --cov-report=term-missing",
+    "test:affected": "uv run python scripts/affected_tests.py --run",
+    "check": "uv run ruff check src tests scripts && uv run ruff format --check src tests scripts",
+    "check:affected": "uv run python scripts/affected_tests.py --lint",
+    "format": "uv run ruff check --fix src tests scripts && uv run ruff format src tests scripts",
     "preflight": "test -z \"$(git status --porcelain)\" && echo 'working tree clean' || { echo 'working tree NOT clean — commit / git stash / git restore before proposing a new feature'; git status --short; exit 1; }",
     "secrets": "gitleaks dir . --no-banner --redact",
     "gates:dev": "npm run check:affected && npm run test:affected",

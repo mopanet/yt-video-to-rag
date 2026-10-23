@@ -7,6 +7,8 @@
 ## Stack
 Claude Code (in a devcontainer) + **gstack** (lifecycle skills) + **OpenSpec** (spec layer, T2) +
 **risk-tiered process (T0/T1/T2)** + TDD + AI code-review. **Linear is tracking only.**
+Code: Python 3.12 via **uv** (`src/video_to_rag/`), **pytest**, **Ruff**; `package.json` is only the
+task runner behind the `npm run …` entry points.
 
 ## Tooling: Claude Code & Codex
 This project is configured for **both** agents.
@@ -100,7 +102,7 @@ runs npm/git/tests by hand.
 
 **Dev gate — every slice, while iterating (fast):**
 ```bash
-npm run gates:dev   # Biome lint of CHANGED files + affected tests only
+npm run gates:dev   # Ruff lint of CHANGED files + affected tests only
 ```
 Both halves are scoped to what you changed: `check:affected` lints only the changed files (so a
 pre-existing issue elsewhere never blocks you), and `test:affected` runs only the tests that import
@@ -109,16 +111,16 @@ not the whole suite. Nothing changed = pass.
 
 **Full gate — once, at the base-branch merge (and in CI):**
 ```bash
-npm test          # node:test — all scenarios
+npm test          # pytest — all scenarios (incl. `model` tests; CI skips those)
 npm run test:cov  # coverage
-npm run check     # Biome — lint + format check (fix: npm run format)
+npm run check     # Ruff — lint + format check (fix: npm run format)
 npm run secrets   # gitleaks — real secret-scan (working tree)
 openspec validate --all
 ```
 `npm run gates` bundles these. It runs at the integration merge into the base branch, and in CI
 (`.github/workflows/gates.yml`) on every PR and push to `main`, plus a full-history gitleaks scan —
 so "protected base branch + green CI" is enforced, not aspirational.
-Production CI adds: `tsc --noEmit` (typecheck), `npm audit` (dependency-audit), e2e.
+Production CI adds: a typecheck, a dependency audit, e2e.
 
 ## Git
 - GitHub Flow: short-lived `feat/*` branch off `main`, Conventional Commits.
