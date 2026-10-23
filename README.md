@@ -60,6 +60,20 @@ uv run video-to-rag search "NSDR protocol" --channel "Huberman Lab"
 
 `--channel` takes a channel name (any case) or id; `--limit` defaults to 8 and is capped at 20.
 
+**Ask Claude (MCP)** — register the stdio server once, then ask in Claude Code in any language;
+Claude searches the library and answers with numbered, timestamped citations and the original
+quotes:
+
+```bash
+claude mcp add video-to-rag -- uv run --directory /path/to/video-to-rag video-to-rag mcp
+claude mcp list   # video-to-rag: ... ✓ Connected
+```
+
+The server offers one tool, `search`, opens the library read-only and never contacts YouTube.
+The first search loads the embedding model (a few seconds, up to ~15 s cold); later ones are
+fast. Append
+`--data-dir <dir>` (or set `VIDEO_TO_RAG_HOME` with `claude mcp add -e`) to serve another library.
+
 **Where the library lives** — one SQLite file, `library.sqlite3`, in
 `~/.local/share/video-to-rag/` on Linux (the OS per-user data directory elsewhere).
 `VIDEO_TO_RAG_HOME=<dir>` overrides the directory and `--data-dir <dir>` overrides both.
