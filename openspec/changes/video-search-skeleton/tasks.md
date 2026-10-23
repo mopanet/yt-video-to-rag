@@ -64,9 +64,9 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 6. Embeddings (`embedding.py`)
 
-- [ ] 6.1 Define the `Embedder` protocol and a deterministic `FakeEmbedder` test helper; verify
+- [x] 6.1 Define the `Embedder` protocol and a deterministic `FakeEmbedder` test helper; verify
   the fake returns stable, normalized vectors in `tests/test_embedding.py`
-- [ ] 6.2 Implement the E5 embedder (fastembed, `query: ` / `passage: ` prefixes, cache under
+- [x] 6.2 Implement the E5 embedder (fastembed, `query: ` / `passage: ` prefixes, cache under
   the user cache dir, notice before the first download, model tokenizer exposed as `count_tokens`);
   `@pytest.mark.model` test that every passage from a long fixture stays within 512 model tokens;
   verify `uv run pytest -m model tests/test_embedding.py` passes
