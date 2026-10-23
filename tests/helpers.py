@@ -1,6 +1,7 @@
 """Shared test helpers (imported by test modules; pytest puts `tests/` on sys.path)."""
 
 import hashlib
+import io
 import json
 import re
 from collections.abc import Sequence
@@ -45,3 +46,50 @@ class FakeEmbedder:
 
     def count_tokens(self, text: str) -> int:
         return len(text.split())
+
+
+class FakeYDL:
+    """Stands in for yt_dlp.YoutubeDL; records how it was configured and what it fetched."""
+
+    def __init__(self, params, info, captions, error):
+        self.params, self._info, self._captions, self._error = params, info, captions, error
+        self.extracted, self.opened = [], []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def extract_info(self, url, download=True):
+        self.extracted.append((url, download))
+        if self._error:
+            raise self._error
+        return self._info
+
+    def urlopen(self, url):
+        self.opened.append(url)
+        return io.BytesIO(json.dumps(self._captions).encode())
+
+
+class FakeYDLFactory:
+    """A `ydl_factory` for the YouTube adapter that hands out FakeYDL instances."""
+
+    def __init__(self, info=None, captions=None, error=None):
+        self.info = info or load_fixture("info_manual_and_auto.json")
+        self.captions = captions or load_fixture("captions_manual.json3")
+        self.error = error
+        self.instances: list[FakeYDL] = []
+
+    def __call__(self, params):
+        ydl = FakeYDL(params, self.info, self.captions, self.error)
+        self.instances.append(ydl)
+        return ydl
+
+    @property
+    def params(self):
+        return self.instances[-1].params
+
+
+def which_all(name):
+    return f"/usr/bin/{name}"

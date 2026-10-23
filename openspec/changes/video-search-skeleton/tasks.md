@@ -84,12 +84,12 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 8. Ingest command (`cli.py ingest`)
 
-- [ ] 8.1 Tests first for the ingest pipeline with a fake YouTube adapter and `FakeEmbedder`:
+- [x] 8.1 Tests first for the ingest pipeline with a fake YouTube adapter and `FakeEmbedder`:
   spec *Ingest summary*, *Video metadata*, *Video without captions* / *Blocked* / *Private video*
   leave the library unchanged with exit 1, channel URL and conflicting cookie options exit
   non-zero, *No cookies in the library* (scan library bytes); implement `video-to-rag ingest`;
   verify `uv run pytest tests/test_cli_ingest.py` passes
-- [ ] 8.2 Add a short "Try it (development)" section to `README.md` (ingest a video, the network
+- [x] 8.2 Add a short "Try it (development)" section to `README.md` (ingest a video, the network
   modes, where the library lives); verify the commands in it match `video-to-rag ingest --help`
 
 ## 9. Search (`search.py`, `cli.py search`)

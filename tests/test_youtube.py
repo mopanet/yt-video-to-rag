@@ -1,10 +1,9 @@
 import argparse
-import io
-import json
 import logging
 
 import pytest
-from helpers import load_fixture
+from helpers import FakeYDLFactory as Factory
+from helpers import load_fixture, which_all
 from yt_dlp.utils import DownloadError
 
 from video_to_rag.captions import NoCaptions
@@ -24,51 +23,6 @@ BOT_CHECK = (
     " or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i"
     "-pass-cookies-to-yt-dlp  for how to manually pass cookies."
 )
-
-
-class FakeYDL:
-    """Stands in for yt_dlp.YoutubeDL; records how it was configured and what it fetched."""
-
-    def __init__(self, params, info, captions, error):
-        self.params, self._info, self._captions, self._error = params, info, captions, error
-        self.extracted, self.opened = [], []
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def extract_info(self, url, download=True):
-        self.extracted.append((url, download))
-        if self._error:
-            raise self._error
-        return self._info
-
-    def urlopen(self, url):
-        self.opened.append(url)
-        return io.BytesIO(json.dumps(self._captions).encode())
-
-
-class Factory:
-    def __init__(self, info=None, captions=None, error=None):
-        self.info = info or load_fixture("info_manual_and_auto.json")
-        self.captions = captions or load_fixture("captions_manual.json3")
-        self.error = error
-        self.instances: list[FakeYDL] = []
-
-    def __call__(self, params):
-        ydl = FakeYDL(params, self.info, self.captions, self.error)
-        self.instances.append(ydl)
-        return ydl
-
-    @property
-    def params(self):
-        return self.instances[-1].params
-
-
-def which_all(name):
-    return f"/usr/bin/{name}"
 
 
 def fetch(network=None, which=which_all, **factory_kwargs):
