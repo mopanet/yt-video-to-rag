@@ -250,9 +250,17 @@ class Library:
     def video_count(self) -> int:
         return self.conn.execute("SELECT count(*) FROM videos").fetchone()[0]
 
-    def passage_count(self, video_id: str) -> int:
+    def passage_count(self, video_id: str | None = None) -> int:
+        """Passages of one video, or of the whole library."""
+        if video_id is None:
+            return self.conn.execute("SELECT count(*) FROM passages").fetchone()[0]
         sql = "SELECT count(*) FROM passages WHERE video_id = ?"
         return self.conn.execute(sql, (video_id,)).fetchone()[0]
+
+    def document_frequency(self, token: str) -> int:
+        """How many passages contain `token`, as the full-text index tokenizes it."""
+        sql = "SELECT count(*) FROM passages_fts WHERE passages_fts MATCH ?"
+        return self.conn.execute(sql, (f'"{token}"',)).fetchone()[0]
 
     def channel_ids_matching(self, name_or_id: str) -> list[str]:
         """Channels whose name matches case-insensitively, or whose id matches exactly."""

@@ -94,15 +94,15 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 9. Search (`search.py`, `cli.py search`)
 
-- [ ] 9.1 Tests first for spec *Several phrasings of one question*, *Exact-term matching*,
+- [x] 9.1 Tests first for spec *Several phrasings of one question*, *Exact-term matching*,
   *Channel filter*, *Result limit* with `FakeEmbedder`; implement hybrid retrieval with RRF and
   safe FTS query building (design D8); verify `uv run pytest tests/test_search.py` passes
-- [ ] 9.2 Tests first for spec *Search hit content* (link `?t=` floor, `m:ss` / `h:mm:ss`,
+- [x] 9.2 Tests first for spec *Search hit content* (link `?t=` floor, `m:ss` / `h:mm:ss`,
   verbatim text, language) and *Empty library* (no file created, exit 0); implement formatting;
   verify `uv run pytest tests/test_search.py -k "hit or empty"` passes
-- [ ] 9.3 `@pytest.mark.model` test for spec *Hungarian question, English passages* with the
+- [x] 9.3 `@pytest.mark.model` test for spec *Hungarian question, English passages* with the
   real E5 model over an English fixture library; verify `uv run pytest -m model tests/test_search_model.py` passes
-- [ ] 9.4 Tests first for spec *Search command* output; implement `video-to-rag search`; extend
+- [x] 9.4 Tests first for spec *Search command* output; implement `video-to-rag search`; extend
   the README section with a search example; verify `uv run pytest tests/test_cli_search.py` passes
 
 ## 10. MCP server (`mcp_server.py`, `cli.py mcp`)

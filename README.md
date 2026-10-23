@@ -49,6 +49,17 @@ first, then automatic) and replaces the video if it is already in the library.
   that proxy (credentials go in the URL; they are masked in every message). The proxy is never a
   command-line option.
 
+**Search** — ask in any language; giving the question also in the videos' language helps.
+Every hit carries title, channel, date, time range, a timestamped `youtu.be` link and the passage
+in its original language:
+
+```bash
+uv run video-to-rag search "hogyan javíthatom a fókuszomat?" "how can I improve my focus?" --limit 3
+uv run video-to-rag search "NSDR protocol" --channel "Huberman Lab"
+```
+
+`--channel` takes a channel name (any case) or id; `--limit` defaults to 8 and is capped at 20.
+
 **Where the library lives** — one SQLite file, `library.sqlite3`, in
 `~/.local/share/video-to-rag/` on Linux (the OS per-user data directory elsewhere).
 `VIDEO_TO_RAG_HOME=<dir>` overrides the directory and `--data-dir <dir>` overrides both.

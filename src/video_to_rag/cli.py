@@ -15,6 +15,14 @@ from .chunking import chunk
 from .embedding import E5Embedder, Embedder
 from .library import Library, LibraryError, library_path
 from .redact import logger, redact
+from .search import (
+    DEFAULT_LIMIT,
+    InvalidQuery,
+    render_text,
+    search,
+    validate_limit,
+    validate_queries,
+)
 from .urls import InvalidUrl, UnsupportedUrl, video_id
 from .youtube import Network, YouTube, YouTubeError, add_network_arguments, network_from
 
@@ -72,6 +80,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ingest.add_argument("url", help="a YouTube video URL (watch?v=, youtu.be/, shorts/, live/)")
     add_network_arguments(ingest)
+
+    search = commands.add_parser(
+        "search",
+        parents=[common],
+        help="find the passages that answer a question, in any language",
+        description="Hybrid search (multilingual meaning + exact words) over the library. Give "
+        "the question in your language and, ideally, translated into the videos' language.",
+    )
+    search.add_argument("queries", nargs="+", metavar="query", help="one to five phrasings")
+    search.add_argument("--channel", metavar="NAME_OR_ID", help="only this channel")
+    search.add_argument(
+        "--limit", type=int, metavar="N", help=f"hits to return (default {DEFAULT_LIMIT}, max 20)"
+    )
     return parser
 
 
@@ -115,6 +136,20 @@ def _ingest(
     return EXIT_OK
 
 
+def _search(args: argparse.Namespace, environ: Mapping[str, str], embedder: Embedder) -> int:
+    validate_queries(args.queries)  # usage errors before the library or the model is touched
+    validate_limit(args.limit)
+    path = library_path(getattr(args, "data_dir", None), environ)
+    library = Library.open_readonly(path, embedder.model_name)
+    try:
+        result = search(library, embedder, args.queries, channel=args.channel, limit=args.limit)
+    finally:
+        if library:
+            library.close()
+    print(render_text(result))
+    return EXIT_OK
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -133,7 +168,9 @@ def main(
     try:
         if args.command == "ingest":
             return _ingest(args, environ, youtube or YouTube, embedder or E5Embedder())
-    except (InvalidUrl, UnsupportedUrl) as error:
+        if args.command == "search":
+            return _search(args, environ, embedder or E5Embedder())
+    except (InvalidUrl, UnsupportedUrl, InvalidQuery) as error:
         parser.print_usage(sys.stderr)
         return _fail(str(error), EXIT_USAGE)
     except (YouTubeError, NoCaptions, LibraryError) as error:

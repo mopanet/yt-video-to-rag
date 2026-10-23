@@ -153,8 +153,13 @@ passages_vec   vec0(embedding float[1024] distance_metric=cosine, channel_id tex
 ### D8 — Hybrid retrieval with Reciprocal Rank Fusion
 Each query runs (a) a vector KNN, top 50, on `query: <q>`, and (b) an FTS5 BM25 search, top 50.
 For (b) the query is tokenized by us and each token quoted and OR-joined, so user text is never
-interpreted as FTS syntax. All lists are fused with RRF, `score = Σ 1 / (60 + rank)`, then
+interpreted as FTS syntax. Tokens found in more than half of all passages are left out of (b):
+their BM25 IDF is ≤ 0 (FTS5 clamps it to ~0), so they carry no evidence, yet every match would
+still take a rank. All lists are fused with RRF, `score = Σ 1 / (60 + rank)`, then
 de-duplicated by passage id and cut to `limit`.
+*Found during implementation*: without that filter the cross-language scenario failed — the
+Hungarian article "a" matched the English word "a", and its noise-only BM25 list outranked the
+clear vector winner in the fusion.
 *Why RRF*: BM25 and cosine scores are not comparable; rank fusion needs no calibration or
 tuning. *Alternative*: a weighted score sum — needs per-corpus tuning.
 
