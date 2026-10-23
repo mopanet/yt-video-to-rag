@@ -147,9 +147,9 @@ class YouTube:
             "noprogress": True,
             "skip_download": True,
             "noplaylist": True,
-            # Captions are all we need: no error without media formats, and a single-file
-            # format so yt-dlp does not warn about ffmpeg for a merge that never happens.
-            "ignore_no_formats_error": True,
+            # A single-file format, so yt-dlp does not warn about ffmpeg for a merge that never
+            # happens. Never set ignore_no_formats_error: it turns the bot check, "Private video"
+            # and the other playability errors into warnings.
             "format": "bestaudio/best",
             "logger": _YtDlpLogger(),
         }

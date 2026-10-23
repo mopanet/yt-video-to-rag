@@ -51,6 +51,14 @@ def test_mode_direct_by_default():
     assert transcript.segments
 
 
+def test_error_playability_errors_stay_errors():
+    # yt-dlp reports the bot check, "Private video" etc. through raise_no_formats(expected=True);
+    # ignore_no_formats_error would turn them into warnings and the ingest into "no captions".
+    factory, _ = fetch()
+    assert not factory.params.get("ignore_no_formats_error")
+    assert not factory.params.get("wait_for_video")
+
+
 def test_mode_browser_cookies():
     factory, _ = fetch(parse(["--cookies-from-browser", "firefox"]))
     assert factory.params["cookiesfrombrowser"] == ("firefox", None, None, None)
