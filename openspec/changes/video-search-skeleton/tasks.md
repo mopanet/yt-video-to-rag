@@ -122,7 +122,7 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 11. Integration
 
-- [ ] 11.1 Run the full `npm run gates` (lint, all tests including `model`, gitleaks,
+- [x] 11.1 Run the full `npm run gates` (lint, all tests including `model`, gitleaks,
   `openspec validate --all`); verify everything is green
 - [ ] 11.2 Live end-to-end check, run by the user in the Verify phase (home connection, or
   `--cookies-from-browser` / `VIDEO_TO_RAG_PROXY` on the server): ingest one Huberman Lab
