@@ -16,8 +16,10 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
   `scripts/affected-tests.mjs` and `test/setup.test.js`, extend `.gitignore` (`.venv/`,
   `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.coverage`, `*.sqlite3`); verify
   `npm run gates` is green on the empty package
-- [ ] 1.4 Update `.github/workflows/gates.yml` (setup-uv, `uv sync --frozen`, Biome removed,
-  `-m "not model"`); verify the CI run on the PR is green
+- [x] 1.4 Update `.github/workflows/gates.yml` (setup-uv, `uv sync --frozen`, Biome removed,
+  `-m "not model"`); verify locally what CI runs: the workflow YAML parses, `uv sync --frozen`
+  succeeds, and `PYTEST_ADDOPTS='-m "not model"' npm run gates` is green (the repo has no GitHub
+  remote yet; the first green CI run on a PR is checked in slice 4, see below)
 - [x] 1.5 Update the toolchain lines in `.dev/guide.md`, `.dev/CONTRIBUTING.md` and `README.md`
   (node:test/Biome → pytest/Ruff, commands unchanged); verify `grep -rn "node:test\|Biome\|biome" .dev README.md` finds no stale mention
 
@@ -136,3 +138,5 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 - AI review for T2: `/review` + `/codex`, then `/cso` (cookie and proxy handling is the security surface).
 - `/ship`: PR to `main`; CHANGELOG and version at release time, not in this slice.
 - `/opsx:archive` after merge, so the four specs land in `openspec/specs/`.
+- Slice 4 (GitHub repository): verify that `.github/workflows/gates.yml` runs green on the first
+  PR (moved here from task 1.4, decided 2026-10-23: no remote exists in this slice).
