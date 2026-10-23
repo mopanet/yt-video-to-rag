@@ -56,10 +56,10 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 5. Chunking (`chunking.py`)
 
-- [ ] 5.1 Tests first for spec *Timestamped passages* (coverage and order, boundaries are segment
+- [x] 5.1 Tests first for spec *Timestamped passages* (coverage and order, boundaries are segment
   boundaries, neighbouring passages overlap) with a word-count tokenizer; implement design D5;
   verify `uv run pytest tests/test_chunking.py` passes
-- [ ] 5.2 Tests first for spec *Passage size bound* (oversized segment split at word boundaries,
+- [x] 5.2 Tests first for spec *Passage size bound* (oversized segment split at word boundaries,
   no word lost, times kept); implement; verify `uv run pytest tests/test_chunking.py -k oversized` passes
 
 ## 6. Embeddings (`embedding.py`)
