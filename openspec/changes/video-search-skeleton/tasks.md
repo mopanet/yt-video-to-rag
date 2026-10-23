@@ -23,7 +23,7 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 2. Video URL input (`urls.py`)
 
-- [ ] 2.1 Tests first for spec *Single video URL input* (watch URL with extra params, short link,
+- [x] 2.1 Tests first for spec *Single video URL input* (watch URL with extra params, short link,
   `shorts/` and `live/` forms, channel URL rejected, playlist-only URL rejected, non-YouTube URL);
   implement URL → video id; verify `uv run pytest tests/test_urls.py` passes
 
