@@ -73,12 +73,12 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 7. Library (`library.py`)
 
-- [ ] 7.1 Tests first for spec *Library location* (default, `VIDEO_TO_RAG_HOME`, `--data-dir`
+- [x] 7.1 Tests first for spec *Library location* (default, `VIDEO_TO_RAG_HOME`, `--data-dir`
   wins); implement path resolution with platformdirs; verify `uv run pytest tests/test_library.py -k location` passes
-- [ ] 7.2 Tests first for spec *Shared multi-channel library* and *Idempotent and atomic ingest*
+- [x] 7.2 Tests first for spec *Shared multi-channel library* and *Idempotent and atomic ingest*
   (same video twice; failure injected before commit keeps the old passages); implement the schema
   and atomic upsert (design D7); verify `uv run pytest tests/test_library.py -k "upsert or atomic or channel"` passes
-- [ ] 7.3 Tests first for spec *Embedding model bookkeeping* (mismatch refused, library
+- [x] 7.3 Tests first for spec *Embedding model bookkeeping* (mismatch refused, library
   unchanged) and read-only opening that never creates the file; implement; verify
   `uv run pytest tests/test_library.py -k "model or readonly"` passes
 
