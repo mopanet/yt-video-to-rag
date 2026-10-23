@@ -107,14 +107,14 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 ## 10. MCP server (`mcp_server.py`, `cli.py mcp`)
 
-- [ ] 10.1 Tests first (in-process MCP client session) for spec *Stdio MCP server* (exactly one
+- [x] 10.1 Tests first (in-process MCP client session) for spec *Stdio MCP server* (exactly one
   tool `search`; stdout carries only protocol messages) and *Search tool* (successful call,
   invalid input keeps the server alive, empty library); implement with FastMCP; verify
   `uv run pytest tests/test_mcp_server.py` passes
-- [ ] 10.2 Tests first for spec *Answering instructions for the client* and *Attribution
+- [x] 10.2 Tests first for spec *Answering instructions for the client* and *Attribution
   discipline* (instructions contain each rule); write the instructions; verify
   `uv run pytest tests/test_mcp_server.py -k instructions` passes
-- [ ] 10.3 Tests first for spec *Read-only and offline from YouTube* (library hash unchanged
+- [x] 10.3 Tests first for spec *Read-only and offline from YouTube* (library hash unchanged
   after many calls; YouTube adapter patched to fail if touched); verify
   `uv run pytest tests/test_mcp_server.py -k readonly` passes
 - [ ] 10.4 Document the dev MCP registration (`claude mcp add video-to-rag -- uv run --directory <repo> video-to-rag mcp`)

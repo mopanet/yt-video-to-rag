@@ -93,6 +93,14 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument(
         "--limit", type=int, metavar="N", help=f"hits to return (default {DEFAULT_LIMIT}, max 20)"
     )
+
+    commands.add_parser(
+        "mcp",
+        parents=[common],
+        help="run the MCP server on stdio (one tool: search)",
+        description="Serve the library to an MCP client such as Claude Code or Claude Desktop "
+        "over standard input/output. Read-only; never contacts YouTube.",
+    )
     return parser
 
 
@@ -170,6 +178,11 @@ def main(
             return _ingest(args, environ, youtube or YouTube, embedder or E5Embedder())
         if args.command == "search":
             return _search(args, environ, embedder or E5Embedder())
+        if args.command == "mcp":
+            from .mcp_server import serve  # the MCP SDK is only needed here
+
+            serve(library_path(getattr(args, "data_dir", None), environ), embedder or E5Embedder())
+            return EXIT_OK
     except (InvalidUrl, UnsupportedUrl, InvalidQuery) as error:
         parser.print_usage(sys.stderr)
         return _fail(str(error), EXIT_USAGE)
