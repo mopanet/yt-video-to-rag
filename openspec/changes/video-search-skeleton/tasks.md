@@ -117,7 +117,7 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 - [x] 10.3 Tests first for spec *Read-only and offline from YouTube* (library hash unchanged
   after many calls; YouTube adapter patched to fail if touched); verify
   `uv run pytest tests/test_mcp_server.py -k readonly` passes
-- [ ] 10.4 Document the dev MCP registration (`claude mcp add video-to-rag -- uv run --directory <repo> video-to-rag mcp`)
+- [x] 10.4 Document the dev MCP registration (`claude mcp add video-to-rag -- uv run --directory <repo> video-to-rag mcp`)
   in the README section; verify `claude mcp list` shows the server connected in this container
 
 ## 11. Integration
