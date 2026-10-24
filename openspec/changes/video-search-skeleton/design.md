@@ -74,7 +74,7 @@ src/video_to_rag/
   embedding.py    Embedder protocol; E5 implementation (fastembed)
   library.py      SQLite schema, open/create, atomic upsert, model check, queries
   search.py       hybrid retrieval, RRF fusion, hit formatting
-  mcp_server.py   FastMCP server, `search` tool, client instructions
+  mcp_server.py   MCPServer, `search` tool, client instructions
   redact.py       credential masking for every outgoing message                   (pure)
 ```
 
@@ -146,7 +146,8 @@ passages_vec   vec0(embedding float[1024] distance_metric=cosine, channel_id tex
 - **Read-only opening** (`file:…?mode=ro`) for `search` and the MCP server: they cannot modify
   the library or create it.
 - **Model check** compares `meta.embedding_model` with the tool's model before any read or write.
-- **Channel filter** uses the vec0 metadata column (`channel_id = ?` inside the KNN query).
+- **Channel filter** uses the vec0 metadata column (`channel_id IN (...)` inside the KNN query;
+  a channel name can match several channel ids).
   Fallback if it misbehaves: brute-force `vec_distance_cosine` over a filtered join, which is
   fast enough at this scale.
 
@@ -170,7 +171,7 @@ and errors go to stderr, results to stdout. Times: `m:ss` under one hour, `h:mm:
 hour; link `t` = floor(start).
 
 ### D10 — MCP server
-The official `mcp` Python SDK (FastMCP), stdio transport. Tool
+The official `mcp` Python SDK (`MCPServer`, FastMCP's successor in mcp 2.x), stdio transport. Tool
 `search(queries: list[str], channel: str | None = None, limit: int = 8)` returns structured hits
 plus a text rendering. The instructions are a constant in `mcp_server.py`, written in English
 (the client answers in the user's language anyway). The embedder loads lazily on the first call

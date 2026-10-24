@@ -112,7 +112,7 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
 
 - [x] 10.1 Tests first (in-process MCP client session) for spec *Stdio MCP server* (exactly one
   tool `search`; stdout carries only protocol messages) and *Search tool* (successful call,
-  invalid input keeps the server alive, empty library); implement with FastMCP; verify
+  invalid input keeps the server alive, empty library); implement with MCPServer; verify
   `uv run pytest tests/test_mcp_server.py` passes
 - [x] 10.2 Tests first for spec *Answering instructions for the client* and *Attribution
   discipline* (instructions contain each rule); write the instructions; verify
