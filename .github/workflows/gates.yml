@@ -17,6 +17,9 @@ jobs:
     env:
       # Tests marked `model` download the ~2.2 GB embedding model; they run locally only.
       PYTEST_ADDOPTS: -m "not model"
+      # Every `uv run` uses the committed uv.lock and fails if it is out of date (instead of
+      # re-resolving), so CI tests exactly what the lock pins.
+      UV_LOCKED: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,7 +29,7 @@ jobs:
         with:
           node-version: 22
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2 # setup-uv publishes no floating major tag after v7
 
       - name: Install gate tools
         run: |
@@ -36,7 +39,7 @@ jobs:
             | sudo tar xz -C /usr/local/bin/ gitleaks
 
       - name: Install deps
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Run gates
         run: npm run gates

@@ -16,10 +16,11 @@ Iterate with `npm run gates:dev`; the full `npm run gates` runs once at the end 
   `scripts/affected-tests.mjs` and `test/setup.test.js`, extend `.gitignore` (`.venv/`,
   `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.coverage`, `*.sqlite3`); verify
   `npm run gates` is green on the empty package
-- [x] 1.4 Update `.github/workflows/gates.yml` (setup-uv, `uv sync --frozen`, Biome removed,
-  `-m "not model"`); verify locally what CI runs: the workflow YAML parses, `uv sync --frozen`
-  succeeds, and `PYTEST_ADDOPTS='-m "not model"' npm run gates` is green (the repo has no GitHub
-  remote yet; the first green CI run on a PR is checked in slice 4, see below)
+- [x] 1.4 Update `.github/workflows/gates.yml` (setup-uv, `uv sync --locked` and `UV_LOCKED`,
+  Biome removed, `-m "not model"`); verify locally what CI runs: the workflow YAML parses,
+  `uv sync --locked` succeeds, and `UV_LOCKED=1 PYTEST_ADDOPTS='-m "not model"' npm run gates` is
+  green (the repo has no GitHub remote yet; the first green CI run on a PR is checked in slice 4,
+  see below)
 - [x] 1.5 Update the toolchain lines in `.dev/guide.md`, `.dev/CONTRIBUTING.md` and `README.md`
   (node:test/Biome → pytest/Ruff, commands unchanged); verify `grep -rn "node:test\|Biome\|biome" .dev README.md` finds no stale mention
 
