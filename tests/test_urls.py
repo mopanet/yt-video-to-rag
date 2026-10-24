@@ -56,6 +56,7 @@ def test_channel_and_playlist_urls_not_supported_yet(url):
         "https://example.com/watch?v=abc123DEF45",
         "https://youtube.com.evil.example/watch?v=abc123DEF45",
         "https://www.youtube.com/watch?v=tooshort",
+        "https://www.youtube.com/watch?v=abc123DEF45%0A",
         "https://youtu.be/",
         "not a url",
         "",

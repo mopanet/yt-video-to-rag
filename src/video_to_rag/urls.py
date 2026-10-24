@@ -3,7 +3,7 @@
 import re
 from urllib.parse import parse_qs, urlsplit
 
-VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+VIDEO_ID_RE = re.compile(r"[A-Za-z0-9_-]{11}")  # used with fullmatch: `$` accepts a final "\n"
 YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com"}
 SHORT_HOSTS = {"youtu.be", "www.youtu.be"}
 PATH_FORMS = ("shorts", "live")
@@ -47,6 +47,6 @@ def video_id(url: str) -> str:
     else:
         candidate = ""
 
-    if not VIDEO_ID_RE.match(candidate):
+    if not VIDEO_ID_RE.fullmatch(candidate):
         raise InvalidUrl(f"not a YouTube video URL: {url.strip()!r}")
     return candidate
