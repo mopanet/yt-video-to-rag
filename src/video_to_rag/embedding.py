@@ -42,9 +42,8 @@ class E5Embedder:
     model_name = MODEL_NAME
     dim = MODEL_DIM
 
-    def __init__(self, cache_dir: Path | None = None, threads: int | None = None):
+    def __init__(self, cache_dir: Path | None = None):
         self._cache_dir = cache_dir or model_cache_dir()
-        self._threads = threads
         self._model = None
 
     def _load(self):
@@ -58,9 +57,7 @@ class E5Embedder:
                     MODEL_NAME,
                     self._cache_dir,
                 )
-            self._model = TextEmbedding(
-                MODEL_NAME, cache_dir=str(self._cache_dir), threads=self._threads, lazy_load=True
-            )
+            self._model = TextEmbedding(MODEL_NAME, cache_dir=str(self._cache_dir), lazy_load=True)
         return self._model
 
     def _embed(self, prefix: str, texts: Sequence[str]) -> np.ndarray:
