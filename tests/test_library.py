@@ -190,6 +190,18 @@ def test_wal_switch_waits_for_a_concurrent_first_ingest(tmp_path, monkeypatch, p
         other.close()
 
 
+def test_wal_switch_returns_where_wal_is_unsupported(tmp_path):
+    # Where WAL is unsupported (e.g. some network filesystems) SQLite keeps its journal mode and
+    # reports it instead of failing; an in-memory database behaves the same ("memory").
+    path = tmp_path / "library.sqlite3"
+    path.touch()
+    library = Library(sqlite3.connect(":memory:", check_same_thread=False), path)
+    switch = threading.Thread(target=library._ensure_wal, daemon=True)
+    switch.start()
+    switch.join(timeout=2)
+    assert not switch.is_alive(), "the WAL switch loops forever"
+
+
 def test_discard_removes_only_a_new_empty_library(tmp_path):
     path = tmp_path / "library.sqlite3"
     sibling = tmp_path / "library.sqlite3.bak"

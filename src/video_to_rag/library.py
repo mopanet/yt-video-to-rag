@@ -196,11 +196,15 @@ class Library:
 
     def _ensure_wal(self) -> None:
         """Switch to WAL (persistent). The switch needs an exclusive lock and SQLite does not
-        wait for it, so a concurrent first ingest would fail at once: retry for a bounded time."""
+        wait for it, so a concurrent first ingest would fail at once: retry for a bounded time.
+        Where WAL is unsupported, SQLite keeps its journal mode without an error; so be it."""
+        if self.conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal":
+            return
         deadline = time.monotonic() + WAL_SWITCH_SECONDS
-        while self.conn.execute("PRAGMA journal_mode").fetchone()[0] != "wal":
+        while True:
             try:
                 self.conn.execute("PRAGMA journal_mode = WAL")
+                return
             except sqlite3.OperationalError as error:
                 if "locked" not in str(error) or time.monotonic() > deadline:
                     raise
