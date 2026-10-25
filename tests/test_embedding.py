@@ -1,10 +1,20 @@
+import threading
+import time
+
 import numpy as np
 import pytest
 from helpers import FakeEmbedder
 
 from video_to_rag.captions import Segment
 from video_to_rag.chunking import chunk
-from video_to_rag.embedding import MODEL_DIM, MODEL_NAME, E5Embedder, Embedder, model_cache_dir
+from video_to_rag.embedding import (
+    MODEL_DIM,
+    MODEL_NAME,
+    E5Embedder,
+    Embedder,
+    EmbeddingUnavailable,
+    model_cache_dir,
+)
 
 
 def test_fake_embedder_satisfies_the_protocol():
@@ -59,6 +69,45 @@ def test_e5_embeds_in_small_batches(tmp_path, monkeypatch):
     monkeypatch.setattr("fastembed.TextEmbedding", FakeTextEmbedding)
     E5Embedder(cache_dir=tmp_path).embed_passages(["a passage"] * 216)  # a 3-hour video
     assert batch_sizes and max(batch_sizes) <= 16
+
+
+def test_e5_concurrent_first_calls_load_the_model_once(tmp_path, monkeypatch):
+    # The MCP server runs each tool call in its own thread.
+    constructed, running, overlaps = [], [], []
+
+    class SlowTextEmbedding:
+        def __init__(self, model_name, **kwargs):
+            time.sleep(0.2)  # reading ~2.2 GB of model files
+            constructed.append(model_name)
+
+        def embed(self, texts, **kwargs):
+            running.append(1)
+            overlaps.append(len(running))
+            time.sleep(0.05)  # fastembed builds its ONNX session here, unguarded
+            running.pop()
+            return [np.ones(MODEL_DIM, np.float32) for _ in texts]
+
+    monkeypatch.setattr("fastembed.TextEmbedding", SlowTextEmbedding)
+    embedder = E5Embedder(cache_dir=tmp_path)
+    threads = [threading.Thread(target=embedder.embed_queries, args=(["q"],)) for _ in range(3)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert len(constructed) == 1
+    assert max(overlaps) == 1
+
+
+def test_e5_model_that_cannot_be_loaded_is_a_clean_error(tmp_path, monkeypatch):
+    class Offline:
+        def __init__(self, model_name, **kwargs):
+            raise ValueError(f"Could not load model {model_name} from any source.")
+
+    monkeypatch.setattr("fastembed.TextEmbedding", Offline)
+    with pytest.raises(EmbeddingUnavailable) as exc:
+        E5Embedder(cache_dir=tmp_path).embed_queries(["q"])
+    message = str(exc.value)
+    assert MODEL_NAME in message and "huggingface.co" in message and str(tmp_path) in message
 
 
 # --- Real model (downloads ~2.2 GB on first use) -----------------------------------------

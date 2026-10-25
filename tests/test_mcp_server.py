@@ -11,6 +11,7 @@ from mcp.client import Client
 
 from video_to_rag.captions import Video
 from video_to_rag.chunking import Passage
+from video_to_rag.embedding import EmbeddingUnavailable
 from video_to_rag.library import Library
 from video_to_rag.mcp_server import INSTRUCTIONS, build_server
 
@@ -173,6 +174,17 @@ async def test_model_mismatch_is_a_tool_error(library_path):
     async with Client(build_server(library_path, OtherEmbedder())) as client:
         result = await client.call_tool("search", {"queries": ["focus"]})
     assert result.is_error and "other/model-y" in text_of(result)
+
+
+@pytest.mark.anyio
+async def test_model_unavailable_is_a_tool_error(library_path):
+    class Offline(FakeEmbedder):
+        def embed_queries(self, texts):
+            raise EmbeddingUnavailable("the embedding model could not be loaded (offline)")
+
+    async with Client(build_server(library_path, Offline())) as client:
+        result = await client.call_tool("search", {"queries": ["focus"]})
+    assert result.is_error and "could not be loaded" in text_of(result)
 
 
 # --- Answering instructions / attribution discipline -------------------------------------

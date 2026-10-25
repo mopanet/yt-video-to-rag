@@ -13,7 +13,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel
 
-from .embedding import Embedder
+from .embedding import Embedder, EmbeddingUnavailable
 from .library import Library, LibraryError
 from .redact import logger
 from .search import DEFAULT_LIMIT, InvalidQuery, render_text, search
@@ -80,7 +80,7 @@ def build_server(library_path: Path, embedder: Embedder) -> MCPServer:
             raise ToolError(str(error)) from None
         try:
             result = search(library, embedder, queries, channel=channel, limit=limit)
-        except InvalidQuery as error:
+        except (InvalidQuery, EmbeddingUnavailable) as error:
             raise ToolError(str(error)) from None
         finally:
             if library:

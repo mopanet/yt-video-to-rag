@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping
 
 from .captions import NoCaptions
 from .chunking import chunk
-from .embedding import E5Embedder, Embedder
+from .embedding import E5Embedder, Embedder, EmbeddingUnavailable
 from .library import Library, LibraryError, library_path
 from .redact import logger, redact
 from .search import (
@@ -192,7 +192,7 @@ def main(
         return _fail(str(error), EXIT_USAGE)
     except InvalidProxy as error:
         return _fail(str(error), EXIT_USAGE)
-    except (YouTubeError, NoCaptions, LibraryError) as error:
+    except (YouTubeError, NoCaptions, LibraryError, EmbeddingUnavailable) as error:
         return _fail(str(error))
     except sqlite3.Error as error:
         return _fail(f"library error: {error}")

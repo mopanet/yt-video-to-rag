@@ -7,6 +7,7 @@ from helpers import FakeEmbedder
 from video_to_rag.captions import Video
 from video_to_rag.chunking import Passage
 from video_to_rag.cli import main
+from video_to_rag.embedding import EmbeddingUnavailable
 from video_to_rag.library import Library
 
 TEXTS = [
@@ -81,6 +82,16 @@ def test_search_before_any_ingest(tmp_path, capsys):
 def test_search_invalid_input_is_a_usage_error(filled, tmp_path, capsys, args):
     assert run(tmp_path, *args) == 2
     assert re.search(r"one to five non-blank|limit", capsys.readouterr().err)
+
+
+def test_search_model_unavailable_is_a_clean_failure(filled, tmp_path, capsys):
+    class Offline(FakeEmbedder):
+        def embed_queries(self, texts):
+            raise EmbeddingUnavailable("the embedding model could not be loaded (offline)")
+
+    assert run(tmp_path, "focus", embedder=Offline()) == 1
+    err = capsys.readouterr().err
+    assert "could not be loaded" in err and "Traceback" not in err
 
 
 def test_search_model_mismatch(filled, tmp_path, capsys):
