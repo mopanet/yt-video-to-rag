@@ -69,6 +69,8 @@ def test_neighbouring_passages_overlap_after_long_segments():
         last = next(s for s in segments if s.end == before.end)
         assert after.start == last.start and after.text.startswith(last.text)
     assert passages[-1].end == segments[-1].end
+    # ...without a passage that is only a copy of the next one's beginning (same start, twice).
+    assert len({p.start for p in passages}) == len(passages)
 
 
 def test_no_overlap_only_where_two_segments_exceed_the_bound():

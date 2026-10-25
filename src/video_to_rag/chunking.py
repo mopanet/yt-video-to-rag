@@ -82,6 +82,9 @@ def chunk(
     passages: list[Passage] = []
     first = reach = 0  # a passage holds at least units[first..reach] (bound permitting)
     while first < len(units):
+        # At least two segments, so a long one is not a passage of its own that the next
+        # passage then repeats in full for the overlap.
+        reach = max(reach, first + 1)
         last = first
         tokens = count_tokens(units[first].text)
         while last + 1 < len(units):
