@@ -1,9 +1,10 @@
 """Segments -> timestamped passages, bounded by real model tokens and overlapping (pure).
 
-Greedy over segments: a passage closes once it spans >= 60 s or holds >= 320 tokens, and never
-exceeds 480 tokens (E5's input limit is 512, including the `passage: ` prefix). The next passage
-starts with the trailing segments that cover the last >= 10 s (at least one segment, as long as
-the bound allows) and reaches past them. A single segment over the bound is split at word
+Greedy over segments: a passage holds at least two segments, closes once it spans >= 60 s or
+holds >= 320 tokens, and never exceeds 480 tokens (E5's input limit is 512, including the
+`passage: ` prefix); the bound wins over the other rules. The next passage starts with the
+trailing segments that cover the last >= 10 s (at least one segment, as long as the bound allows)
+and reaches past them. A single segment over the bound is split at word
 boundaries, a single word over it (a script written without spaces, a long URL) at characters;
 each part keeps the segment's times. `count_tokens` is the model's own tokenizer in production.
 """
@@ -62,11 +63,9 @@ def _split(segment: Segment, count_tokens: CountTokens, max_tokens: int) -> list
 def _overlap_start(
     units: Sequence[Segment], first: int, last: int, count_tokens: CountTokens, max_tokens: int
 ) -> int:
-    """Index the next passage starts at: the tail covering the last OVERLAP_SECONDS.
-
-    For a one-segment passage that is the segment itself; `chunk` then makes the next passage
-    reach past it, so the overlap never stalls.
-    """
+    """Index the next passage starts at: the tail covering the last OVERLAP_SECONDS, or
+    `last + 1` (no overlap) when the tail and the next segment do not fit the bound together.
+    `chunk` makes the next passage reach past `last`, so the overlap never stalls."""
     k = last
     while k - 1 > first and units[last].end - units[k].start < OVERLAP_SECONDS:
         k -= 1
