@@ -3,6 +3,7 @@
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from urllib.parse import parse_qs, urlsplit
 
 ANNOTATION_RE = re.compile(r"\[[^\]]*\]")
 WHITESPACE_RE = re.compile(r"\s+")
@@ -83,7 +84,9 @@ def spoken_language(info: dict) -> str | None:
 
 
 def _json3_url(formats: list[dict] | None) -> str | None:
-    return next((f["url"] for f in formats or [] if f.get("ext") == "json3" and f.get("url")), None)
+    """The track's json3 URL, unless it is a machine translation (`tlang=`)."""
+    url = next((f["url"] for f in formats or [] if f.get("ext") == "json3" and f.get("url")), None)
+    return None if url is None or "tlang" in parse_qs(urlsplit(url).query) else url
 
 
 def select_track(info: dict) -> CaptionTrack:
@@ -100,7 +103,10 @@ def select_track(info: dict) -> CaptionTrack:
             if url := _json3_url(manual[key]):
                 return CaptionTrack(language=lang, kind="manual", url=url)
         auto = info.get("automatic_captions") or {}
-        for key in (f"{lang}{ORIG_SUFFIX}", lang):
+        # With an `-orig` (speech-recognition source) key present, every other key is a
+        # translation of it, even one named after the metadata's language.
+        has_orig = any(key.endswith(ORIG_SUFFIX) for key in auto)
+        for key in (f"{lang}{ORIG_SUFFIX}",) if has_orig else (lang,):
             if url := _json3_url(auto.get(key)):
                 return CaptionTrack(language=lang, kind="auto", url=url)
     raise NoCaptions(

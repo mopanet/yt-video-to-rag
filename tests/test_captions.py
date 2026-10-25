@@ -44,6 +44,33 @@ def test_select_automatic_track_without_orig_key():
     )
 
 
+def test_select_never_a_translation_when_metadata_names_another_language():
+    # The metadata says English, but the speech recognition ran on Hungarian: the "en"
+    # automatic track is a machine translation of it (tlang=en) and must not be used.
+    base = "https://www.youtube.com/api/timedtext?v=magyarVid01&kind=asr&lang=hu"
+    info = {
+        "id": "magyarVid01",
+        "language": "en",
+        "subtitles": {},
+        "automatic_captions": {
+            "hu-orig": [{"ext": "json3", "url": f"{base}&fmt=json3"}],
+            "hu": [{"ext": "json3", "url": f"{base}&fmt=json3"}],
+            "en": [{"ext": "json3", "url": f"{base}&tlang=en&fmt=json3"}],
+        },
+    }
+    with pytest.raises(NoCaptions):
+        select_track(info)
+
+
+def test_select_without_orig_key_still_refuses_a_translated_url():
+    info = load_fixture("info_auto_only.json")
+    del info["automatic_captions"]["en-orig"]
+    for fmt in info["automatic_captions"]["en"]:
+        fmt["url"] += "&tlang=en"
+    with pytest.raises(NoCaptions):
+        select_track(info)
+
+
 def test_select_spoken_language_missing_from_metadata():
     info = load_fixture("info_no_language.json")
     assert select_track(info) == CaptionTrack(
