@@ -313,6 +313,35 @@ def test_error_rate_limit_is_temporary_not_unavailable():
     assert "rate-limited" in message and "try again later" in message
 
 
+def test_error_http_429_is_a_rate_limit():
+    error = DownloadError(f"ERROR: [youtube] {VIDEO}: HTTP Error 429: Too Many Requests")
+    with pytest.raises(RateLimited):
+        fetch(error=error)
+
+
+@pytest.mark.parametrize(
+    ("password", "reason", "kind"),
+    [
+        ("video", "Private video. Sign in if you've been granted access", Unavailable),
+        ("later", "Video unavailable. This content isn't available, try again later.", RateLimited),
+    ],
+)
+def test_error_kind_does_not_depend_on_masking(password, reason, kind):
+    # A credential that happens to be a word of the reason must not change its classification.
+    network = parse([], {"VIDEO_TO_RAG_PROXY": f"http://alice:{password}@proxy.example:8080"})
+    with pytest.raises(kind) as exc:
+        fetch(network, error=DownloadError(f"ERROR: [youtube] {VIDEO}: {reason}"))
+    assert reason.replace(password, "***") in str(exc.value)  # still masked where it is shown
+
+
+def test_error_masks_the_proxy_user_name_on_its_own():
+    network = parse([], {"VIDEO_TO_RAG_PROXY": "http://brd-customer-x1:pw@proxy.example:8080"})
+    error = DownloadError("ERROR: proxy authentication failed for brd-customer-x1")
+    with pytest.raises(YouTubeError) as exc:
+        fetch(network, error=error)
+    assert "brd-customer-x1" not in str(exc.value)
+
+
 def test_error_proxy_failure_message_is_masked():
     proxy = "http://alice:s3cret@proxy.example:8080"
     network = parse([], {"VIDEO_TO_RAG_PROXY": proxy})
@@ -367,8 +396,9 @@ class RawCaptions(Factory):
         b'{"events": [{"segs": [{"utf8": "no start time"}]}]}',
         b'{"events": [42]}',
         b'["not", "an", "object"]',
+        b"[" * 100_000,
     ],
-    ids=["html", "bytes", "no-start", "event-not-object", "array"],
+    ids=["html", "bytes", "no-start", "event-not-object", "array", "deeply-nested"],
 )
 def test_error_unreadable_captions(raw):
     youtube = YouTube(Network(), ydl_factory=RawCaptions(raw), which=which_all)

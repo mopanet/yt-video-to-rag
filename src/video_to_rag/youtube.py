@@ -38,7 +38,7 @@ UNAVAILABLE_MARKERS = (
     "not available from your location",
 )
 # yt-dlp's rate-limit reason starts with "Video unavailable", so this is checked first.
-RATE_LIMIT_MARKERS = ("try again later", "rate-limited")
+RATE_LIMIT_MARKERS = ("try again later", "rate-limited", "http error 429", "too many requests")
 PREFIX_RE = re.compile(r"^(?:ERROR:\s*)?(?:\[\w+\]\s*)?(?:[\w-]{11}:\s*)?")
 
 BLOCKED_MESSAGE = (
@@ -214,8 +214,8 @@ def _proxy_secrets(proxy: str | None) -> tuple[str, ...]:
         return ()
     parts = urlsplit(proxy)
     userinfo = parts.netloc.rpartition("@")[0]
-    password = parts.password or ""
-    candidates = {userinfo, unquote(userinfo), password, unquote(password)}
+    user, password = parts.username or "", parts.password or ""
+    candidates = {userinfo, unquote(userinfo), user, unquote(user), password, unquote(password)}
     return tuple(s for s in candidates if len(s) >= MIN_SECRET_LENGTH)
 
 
@@ -302,13 +302,14 @@ class YouTube:
             raise self._map_error(str(error)) from None
         try:
             segments = parse_json3(json.loads(raw))
-        except (ValueError, KeyError, TypeError, AttributeError):  # not json3, or malformed
+        except (ValueError, KeyError, TypeError, AttributeError, RecursionError):  # not json3
             raise YouTubeError("YouTube returned captions that could not be read") from None
         return Transcript(video=video_from_info(info, track), segments=segments)
 
     def _map_error(self, text: str) -> YouTubeError:
-        reason = redact(PREFIX_RE.sub("", text.strip()), self._secrets)
-        lowered = reason.lower()
+        said = PREFIX_RE.sub("", text.strip())
+        lowered = said.lower()  # classify what YouTube said; a masked credential could hide a word
+        reason = redact(said, self._secrets)
         if "confirm you" in lowered and "not a bot" in lowered:
             return Blocked(BLOCKED_MESSAGE + (EXPIRED_HINT if self.network.uses_cookies else ""))
         if any(marker in lowered for marker in RATE_LIMIT_MARKERS):
