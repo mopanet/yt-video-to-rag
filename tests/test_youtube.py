@@ -1,6 +1,7 @@
 import argparse
 import io
 import logging
+import sys
 
 import pytest
 from helpers import FIXTURES, load_fixture, which_all
@@ -196,6 +197,15 @@ def test_mode_conflicting_cookie_options(tmp_path, capsys):
         parse(["--cookies-from-browser", "firefox", "--cookies", str(cookies)])
     assert exc.value.code == 2
     assert "not allowed with" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="the desktop keyring lookup is Linux-only")
+def test_mode_chrome_cookies_on_linux_can_reach_the_keyring():
+    # Chromium-family browsers encrypt their cookies with a key from the GNOME/KDE keyring;
+    # without secretstorage yt-dlp fails with a pip hint that does not reach this venv.
+    from yt_dlp.dependencies import secretstorage
+
+    assert secretstorage is not None
 
 
 def test_mode_unsupported_browser(capsys):

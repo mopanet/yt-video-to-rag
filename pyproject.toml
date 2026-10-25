@@ -11,7 +11,7 @@ dependencies = [
     "numpy>=2.4.6",
     "platformdirs>=4.13.5",
     "sqlite-vec>=0.1.9",
-    "yt-dlp[default]>=2026.10.21",
+    "yt-dlp[default,secretstorage]>=2026.10.21",
 ]
 
 [project.scripts]
