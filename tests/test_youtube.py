@@ -12,6 +12,7 @@ from video_to_rag.youtube import (
     Blocked,
     InvalidProxy,
     Network,
+    RateLimited,
     Unavailable,
     YouTube,
     YouTubeError,
@@ -255,6 +256,15 @@ def test_error_blocked_although_cookies_were_sent(tmp_path):
             "Join this channel to get access to members-only content like this video",
             "members-only",
         ),
+        (
+            "Sign in to confirm your age. This video may be inappropriate for some users.",
+            "confirm your age",
+        ),
+        (
+            "The uploader has not made this video available in your country",
+            "in your country",
+        ),
+        ("This video is not available from your location due to geo restriction", "location"),
     ],
 )
 def test_error_unavailable_video_keeps_youtube_reason(reason, expected):
@@ -264,6 +274,19 @@ def test_error_unavailable_video_keeps_youtube_reason(reason, expected):
     assert "unavailable" in message
     assert expected in message
     assert "ERROR:" not in message
+
+
+def test_error_rate_limit_is_temporary_not_unavailable():
+    # yt-dlp's wording; it starts with "Video unavailable" but the video is fine.
+    reason = (
+        "Video unavailable. This content isn't available, try again later. The current session "
+        "has been rate-limited by YouTube for up to an hour."
+    )
+    with pytest.raises(RateLimited) as exc:
+        fetch(error=DownloadError(f"ERROR: [youtube] {VIDEO}: {reason}"))
+    assert not isinstance(exc.value, Unavailable)
+    message = str(exc.value)
+    assert "rate-limited" in message and "try again later" in message
 
 
 def test_error_proxy_failure_message_is_masked():

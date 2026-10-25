@@ -33,7 +33,12 @@ UNAVAILABLE_MARKERS = (
     "members-only",
     "members only",
     "removed",
+    "confirm your age",
+    "available in your country",
+    "not available from your location",
 )
+# yt-dlp's rate-limit reason starts with "Video unavailable", so this is checked first.
+RATE_LIMIT_MARKERS = ("try again later", "rate-limited")
 PREFIX_RE = re.compile(r"^(?:ERROR:\s*)?(?:\[\w+\]\s*)?(?:[\w-]{11}:\s*)?")
 
 BLOCKED_MESSAGE = (
@@ -59,6 +64,10 @@ class Blocked(YouTubeError):
 
 class Unavailable(YouTubeError):
     """The video is private, deleted, members-only or otherwise unavailable."""
+
+
+class RateLimited(YouTubeError):
+    """YouTube refuses this session for a while; the video itself may be fine."""
 
 
 class InvalidProxy(ValueError):
@@ -294,6 +303,8 @@ class YouTube:
         lowered = reason.lower()
         if "confirm you" in lowered and "not a bot" in lowered:
             return Blocked(BLOCKED_MESSAGE + (EXPIRED_HINT if self.network.uses_cookies else ""))
+        if any(marker in lowered for marker in RATE_LIMIT_MARKERS):
+            return RateLimited(f"YouTube rate-limited this session; try again later: {reason}")
         if any(marker in lowered for marker in UNAVAILABLE_MARKERS):
             return Unavailable(f"the video is unavailable: {reason}")
         via = f" (via proxy {_proxy_display(self.network.proxy)})" if self.network.proxy else ""
