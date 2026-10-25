@@ -1,4 +1,5 @@
 import argparse
+import io
 import logging
 
 import pytest
@@ -320,6 +321,41 @@ def test_error_unknown_is_generic_and_masked():
         fetch(error=error)
     assert type(exc.value) is YouTubeError
     assert "hunter2" not in str(exc.value)
+
+
+class RawCaptions(Factory):
+    """A factory whose caption download returns the given raw bytes."""
+
+    def __init__(self, raw):
+        super().__init__()
+        self.raw = raw
+
+    def __call__(self, params):
+        ydl = super().__call__(params)
+        ydl.urlopen = lambda url: io.BytesIO(self.raw)
+        return ydl
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b"<html>not json</html>",
+        b"\xff\xfe\x00 not utf-8",
+        b'{"events": [{"segs": [{"utf8": "no start time"}]}]}',
+        b'{"events": [42]}',
+        b'["not", "an", "object"]',
+    ],
+    ids=["html", "bytes", "no-start", "event-not-object", "array"],
+)
+def test_error_unreadable_captions(raw):
+    youtube = YouTube(Network(), ydl_factory=RawCaptions(raw), which=which_all)
+    with pytest.raises(YouTubeError, match="could not be read"):
+        youtube.fetch(VIDEO)
+
+
+def test_error_other_value_errors_are_not_reported_as_captions():
+    with pytest.raises(ValueError, match="internal"):
+        fetch(error=ValueError("internal"))
 
 
 def test_error_no_captions_propagates():

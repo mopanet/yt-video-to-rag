@@ -291,12 +291,14 @@ class YouTube:
                 info = ydl.extract_info(url, download=False)
                 track = select_track(info)
                 with ydl.urlopen(track.url) as response:
-                    data = json.loads(response.read())
+                    raw = response.read()
         except YoutubeDLError as error:
             raise self._map_error(str(error)) from None
-        except ValueError:
+        try:
+            segments = parse_json3(json.loads(raw))
+        except (ValueError, KeyError, TypeError, AttributeError):  # not json3, or malformed
             raise YouTubeError("YouTube returned captions that could not be read") from None
-        return Transcript(video=video_from_info(info, track), segments=parse_json3(data))
+        return Transcript(video=video_from_info(info, track), segments=segments)
 
     def _map_error(self, text: str) -> YouTubeError:
         reason = redact(PREFIX_RE.sub("", text.strip()), self._secrets)
