@@ -44,8 +44,9 @@ to confirm you're not a bot" (typical from cloud or VPN addresses):
 - `--cookies-from-browser firefox` (or `chrome:Default`, …) — the cookies of a browser profile
   that is logged in to YouTube. Use a separate Google account: cookie use can get an account
   flagged.
-- `--cookies cookies.txt` — a Netscape-format cookie file. It is only read, never modified, and
-  a malformed file is refused without showing its contents.
+- `--cookies ~/.config/video-to-rag/cookies.txt` — a Netscape-format cookie file. Keep it
+  outside the repository: it is a logged-in session. It is only read, never modified, and a
+  malformed file is refused without showing its contents.
 - `VIDEO_TO_RAG_PROXY=http://host:port` in the environment — every YouTube request goes through
   that proxy (credentials go in the URL, `http://user:password@host:port`, with reserved
   characters percent-encoded, e.g. `/` as `%2F`; they are masked in every message). The proxy is
