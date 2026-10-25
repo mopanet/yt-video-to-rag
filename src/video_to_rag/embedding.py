@@ -108,4 +108,8 @@ class E5Embedder:
     def count_tokens(self, text: str) -> int:
         """Model tokens incl. special tokens; the tokenizer caps at 512, still above our bound."""
         with self._lock:
-            return self._load().token_count(text)
+            model = self._load()
+            try:
+                return model.token_count(text)
+            except Exception as error:  # fastembed loads the tokenizer lazily, here
+                raise self._unavailable(error) from error

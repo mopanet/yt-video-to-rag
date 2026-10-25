@@ -133,6 +133,20 @@ def test_e5_model_that_cannot_be_loaded_is_a_clean_error(tmp_path, monkeypatch):
     assert MODEL_NAME in message and "huggingface.co" in message and str(tmp_path) in message
 
 
+def test_e5_tokenizer_that_cannot_be_loaded_is_a_clean_error(tmp_path, monkeypatch):
+    # Ingest first touches the model through count_tokens (chunking runs before embedding).
+    class NoTokenizer:
+        def __init__(self, model_name, **kwargs):
+            pass
+
+        def token_count(self, text):
+            raise ValueError("tokenizer.json is missing or corrupt")
+
+    monkeypatch.setattr("fastembed.TextEmbedding", NoTokenizer)
+    with pytest.raises(EmbeddingUnavailable, match="tokenizer.json"):
+        E5Embedder(cache_dir=tmp_path).count_tokens("focus")
+
+
 # --- Real model (downloads ~2.2 GB on first use) -----------------------------------------
 
 SENTENCES = [
