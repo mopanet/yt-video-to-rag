@@ -105,8 +105,12 @@ def select_track(info: dict) -> CaptionTrack:
         auto = info.get("automatic_captions") or {}
         # With an `-orig` (speech-recognition source) key present, every other key is a
         # translation of it, even one named after the metadata's language.
-        has_orig = any(key.endswith(ORIG_SUFFIX) for key in auto)
-        for key in (f"{lang}{ORIG_SUFFIX}",) if has_orig else (lang,):
+        origs = [key for key in auto if key.endswith(ORIG_SUFFIX)]
+        if origs:  # e.g. "en-orig", or a regional "pt-BR-orig"
+            keys = sorted(k for k in origs if base_language(k.removesuffix(ORIG_SUFFIX)) == lang)
+        else:
+            keys = [lang]
+        for key in keys:
             if url := _json3_url(auto.get(key)):
                 return CaptionTrack(language=lang, kind="auto", url=url)
     raise NoCaptions(

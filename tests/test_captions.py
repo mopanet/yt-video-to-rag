@@ -71,6 +71,22 @@ def test_select_without_orig_key_still_refuses_a_translated_url():
         select_track(info)
 
 
+@pytest.mark.parametrize("language", [None, "pt", "pt-BR"])
+def test_select_regional_speech_recognition_track(language):
+    base = "https://www.youtube.com/api/timedtext?v=brasil00001&kind=asr&lang=pt-BR"
+    info = {
+        "id": "brasil00001",
+        "language": language,
+        "subtitles": {},
+        "automatic_captions": {
+            "pt-BR-orig": [{"ext": "json3", "url": f"{base}&fmt=json3"}],
+            "pt-BR": [{"ext": "json3", "url": f"{base}&fmt=json3"}],
+            "en": [{"ext": "json3", "url": f"{base}&tlang=en&fmt=json3"}],
+        },
+    }
+    assert select_track(info) == CaptionTrack(language="pt", kind="auto", url=f"{base}&fmt=json3")
+
+
 def test_select_spoken_language_missing_from_metadata():
     info = load_fixture("info_no_language.json")
     assert select_track(info) == CaptionTrack(
