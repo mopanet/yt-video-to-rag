@@ -1,7 +1,7 @@
 import hashlib
 
 import pytest
-from helpers import FakeEmbedder, FakeYDLFactory, load_fixture, which_all
+from helpers import FIXTURES, FakeEmbedder, FakeYDLFactory, load_fixture, which_all
 
 from video_to_rag.captions import (
     NoCaptions,
@@ -16,7 +16,8 @@ from video_to_rag.youtube import Blocked, Unavailable, YouTube
 
 URL = "https://www.youtube.com/watch?v=abc123DEF45&t=90s&list=PL123"
 BLOCKED = Blocked("YouTube blocked the request ... --cookies-from-browser ... VIDEO_TO_RAG_PROXY")
-BOTH_COOKIE_OPTIONS = ["--cookies-from-browser", "firefox", "--cookies", __file__]
+COOKIES = str(FIXTURES / "netscape_cookies.txt")
+BOTH_COOKIE_OPTIONS = ["--cookies-from-browser", "firefox", "--cookies", COOKIES]
 
 
 def two_hour_transcript(info_name="info_auto_only.json"):

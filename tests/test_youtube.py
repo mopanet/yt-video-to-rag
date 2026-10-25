@@ -2,8 +2,9 @@ import argparse
 import logging
 
 import pytest
+from helpers import FIXTURES, load_fixture, which_all
 from helpers import FakeYDLFactory as Factory
-from helpers import load_fixture, which_all
+from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 
 from video_to_rag.captions import NoCaptions
@@ -69,11 +70,58 @@ def test_mode_browser_cookies_with_profile():
     assert factory.params["cookiesfrombrowser"] == ("chrome", "Profile 1", None, None)
 
 
-def test_mode_cookie_file(tmp_path):
-    cookies = tmp_path / "cookies.txt"
-    cookies.write_text("# Netscape HTTP Cookie File\n")
+def test_mode_cookie_file():
+    cookies = FIXTURES / "netscape_cookies.txt"
     factory, _ = fetch(parse(["--cookies", str(cookies)]))
-    assert factory.params["cookiefile"] == str(cookies)
+    # yt-dlp gets an in-memory copy: it writes the jar back on close, never to the user's file.
+    assert factory.params["cookiefile"].getvalue() == cookies.read_text()
+
+
+@pytest.mark.parametrize(
+    "lines",
+    [
+        [".youtube.com TRUE / TRUE 1999999999 SID FAKEVALUE123"],  # tabs became spaces
+        [".youtube.com\tFALSE\t/\tTRUE\t1999999999\tSID\tFAKEVALUE123"],  # dot domain, FALSE
+        [".youtube.com\tTRUE\t/\tTRUE\tsoon\tSID\tFAKEVALUE123"],  # expiry not a number
+    ],
+    ids=["spaces", "subdomain-flag", "expiry"],
+)
+def test_mode_malformed_cookie_file_rejected_without_showing_it(tmp_path, capsys, lines):
+    cookies = tmp_path / "cookies.txt"
+    cookies.write_text("\n".join(["# Netscape HTTP Cookie File", *lines]) + "\n")
+    with pytest.raises(SystemExit) as exc:
+        parse(["--cookies", str(cookies)])
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "Netscape" in err
+    assert "FAKEVALUE123" not in err and "SID" not in err
+
+
+def test_mode_cookie_file_without_header_rejected(tmp_path, capsys):
+    cookies = tmp_path / "cookies.txt"
+    cookies.write_text('[{"name": "SID", "value": "FAKEVALUE123"}]\n')  # a JSON export
+    with pytest.raises(SystemExit):
+        parse(["--cookies", str(cookies)])
+    assert "FAKEVALUE123" not in capsys.readouterr().err
+
+
+class CookieLoadingYDL(YoutubeDL):
+    """The real YoutubeDL: loads the cookie jar as a request would, then fails offline."""
+
+    def extract_info(self, url, download=True):
+        assert len(self.cookiejar) == 2
+        raise DownloadError("ERROR: [youtube] stop here")
+
+
+def test_mode_cookie_file_is_never_written(tmp_path):
+    cookies = tmp_path / "cookies.txt"
+    original = (FIXTURES / "netscape_cookies.txt").read_text()
+    cookies.write_text(original)
+    cookies.chmod(0o400)  # least privilege: yt-dlp's save-on-close must not need write access
+    youtube = YouTube(parse(["--cookies", str(cookies)]), ydl_factory=CookieLoadingYDL)
+    with pytest.raises(YouTubeError, match="stop here"):
+        youtube.fetch(VIDEO)
+    assert cookies.read_text() == original
 
 
 def test_mode_proxy_from_environment_covers_every_request():

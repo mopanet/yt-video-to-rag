@@ -6,14 +6,17 @@ on a command line, and its options dict is never logged.
 """
 
 import argparse
+import contextlib
+import io
 import json
 import re
 import shutil
+import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from yt_dlp.cookies import SUPPORTED_BROWSERS
+from yt_dlp.cookies import SUPPORTED_BROWSERS, YoutubeDLCookieJar
 from yt_dlp.utils import YoutubeDLError
 
 from .captions import Transcript, parse_json3, select_track, video_from_info
@@ -76,9 +79,46 @@ def _browser(value: str) -> tuple[str, str | None]:
     return name, profile.strip() or None
 
 
+def _cookie_problem(text: str) -> str | None:
+    """Why yt-dlp could not load this cookie file, or None. Never quotes the file.
+
+    yt-dlp prints every line it skips, cookie value included, straight to stderr, and the
+    standard library puts a rejected line into its error message; so the file is checked here,
+    with yt-dlp's own loader and its output swallowed, before yt-dlp ever sees it.
+    """
+    bad = [
+        n
+        for n, line in enumerate(text.splitlines(), start=1)
+        if (entry := line.removeprefix("#HttpOnly_")).strip()
+        and not entry.startswith("#")
+        and len(entry.split("\t")) != 7
+    ]
+    if bad:
+        return f"line {', '.join(map(str, bad[:5]))} is not 7 tab-separated fields"
+    swallowed = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(swallowed), warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            YoutubeDLCookieJar(io.StringIO(text)).load()
+    except Exception:
+        return "its entries are not valid cookie-file entries"
+    if swallowed.getvalue():
+        return "some of its entries are not valid cookie-file entries"
+    return None
+
+
 def _cookie_file(value: str) -> str:
-    if not Path(value).is_file():
-        raise argparse.ArgumentTypeError(f"cookie file not found: {value}")
+    try:
+        text = Path(value).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise argparse.ArgumentTypeError(f"cookie file not found: {value}") from None
+    except (OSError, UnicodeDecodeError):
+        raise argparse.ArgumentTypeError(f"cookie file not readable as text: {value}") from None
+    if problem := _cookie_problem(text):
+        raise argparse.ArgumentTypeError(
+            f"{value} is not a Netscape-format cookie file: {problem} "
+            "(its contents are never shown)"
+        )
     return value
 
 
@@ -165,7 +205,11 @@ class YouTube:
             browser, profile = self.network.cookies_from_browser
             params["cookiesfrombrowser"] = (browser, profile, None, None)
         if self.network.cookie_file:
-            params["cookiefile"] = self.network.cookie_file
+            # An in-memory copy: yt-dlp saves the jar back on close, which would rewrite the
+            # user's credential file (and fail on a read-only one).
+            params["cookiefile"] = io.StringIO(
+                Path(self.network.cookie_file).read_text(encoding="utf-8")
+            )
         if self.network.proxy:
             params["proxy"] = self.network.proxy
         return params

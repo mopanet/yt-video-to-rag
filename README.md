@@ -43,8 +43,8 @@ first, then automatic) and replaces the video if it is already in the library.
 - `--cookies-from-browser firefox` (or `chrome:Default`, …) — the cookies of a browser profile
   that is logged in to YouTube. Use a separate Google account: cookie use can get an account
   flagged.
-- `--cookies cookies.txt` — a Netscape-format cookie file (yt-dlp may write refreshed cookies back
-  to it).
+- `--cookies cookies.txt` — a Netscape-format cookie file. It is only read, never modified, and
+  a malformed file is refused without showing its contents.
 - `VIDEO_TO_RAG_PROXY=http://host:port` in the environment — every YouTube request goes through
   that proxy (credentials go in the URL; they are masked in every message). The proxy is never a
   command-line option.

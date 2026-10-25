@@ -1,0 +1,5 @@
+# Netscape HTTP Cookie File
+# Fake values for the tests; never a real session.
+
+.youtube.com	TRUE	/	TRUE	1999999999	SID	FAKE_SID_VALUE
+#HttpOnly_.youtube.com	TRUE	/	TRUE	1999999999	HSID	FAKE_HSID_VALUE
