@@ -10,6 +10,7 @@ from yt_dlp.utils import DownloadError
 from video_to_rag.captions import NoCaptions
 from video_to_rag.youtube import (
     Blocked,
+    InvalidProxy,
     Network,
     Unavailable,
     YouTube,
@@ -137,6 +138,40 @@ def test_mode_blank_proxy_variable_means_direct():
     assert parse([], {"VIDEO_TO_RAG_PROXY": "  "}).proxy is None
 
 
+@pytest.mark.parametrize(
+    "proxy",
+    [
+        "alice:s3cret@proxy.example:8080",  # no scheme: yt-dlp would add one and use it
+        "//alice:s3cret@proxy.example:8080",
+        "http://alice:s3/cret@proxy.example:8080",  # raw "/" in the password
+        "http://alice:s3#cret@proxy.example:8080",
+        "http://alice:s3?cret@proxy.example:8080",
+        "ftp://alice:s3cret@proxy.example:21",
+        "http://alice:s3cret@proxy.example:port",
+        "http://alice:s3cret@",
+    ],
+)
+def test_mode_invalid_proxy_refused_without_showing_it(proxy):
+    with pytest.raises(InvalidProxy) as exc:
+        parse([], {"VIDEO_TO_RAG_PROXY": proxy})
+    message = str(exc.value)
+    assert "VIDEO_TO_RAG_PROXY" in message and "%2F" in message
+    assert "alice" not in message and "s3" not in message and "cret" not in message
+
+
+@pytest.mark.parametrize(
+    "proxy",
+    [
+        "http://proxy.example:8080",
+        "http://proxy.example:8080/",
+        "socks5h://alice:s3%2Fcret@10.0.0.1:1080",
+        "https://[::1]:3128",
+    ],
+)
+def test_mode_valid_proxy_accepted(proxy):
+    assert parse([], {"VIDEO_TO_RAG_PROXY": proxy}).proxy == proxy
+
+
 def test_mode_proxy_is_not_a_command_line_argument(capsys):
     with pytest.raises(SystemExit) as exc:
         parse(["--proxy", "http://proxy.example:8080"])
@@ -234,6 +269,17 @@ def test_error_proxy_failure_message_is_masked():
     message = str(exc.value)
     assert "http://***@proxy.example:8080" in message
     assert "alice" not in message and "s3cret" not in message
+
+
+def test_error_names_the_proxy_without_its_credentials():
+    network = parse([], {"VIDEO_TO_RAG_PROXY": "http://alice:s3%2Fcret@proxy.example:8080"})
+    # The decoded password, outside any URL, as a library might print it.
+    error = DownloadError("ERROR: [youtube] abc123DEF45: authentication as alice:s3/cret refused")
+    with pytest.raises(YouTubeError) as exc:
+        fetch(network, error=error)
+    message = str(exc.value)
+    assert message.endswith("(via proxy http://proxy.example:8080)")
+    assert "s3/cret" not in message and "s3%2Fcret" not in message
 
 
 def test_error_unknown_is_generic_and_masked():

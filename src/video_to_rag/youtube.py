@@ -15,6 +15,7 @@ import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from yt_dlp.cookies import SUPPORTED_BROWSERS, YoutubeDLCookieJar
 from yt_dlp.utils import YoutubeDLError
@@ -23,6 +24,8 @@ from .captions import Transcript, parse_json3, select_track, video_from_info
 from .redact import logger, redact
 
 PROXY_ENV = "VIDEO_TO_RAG_PROXY"
+PROXY_SCHEMES = ("http", "https", "socks4", "socks4a", "socks5", "socks5h")
+MIN_SECRET_LENGTH = 4  # shorter credentials would mask ordinary words; their URL is masked anyway
 JS_RUNTIMES = ("deno", "node")  # in order of preference
 UNAVAILABLE_MARKERS = (
     "private video",
@@ -56,6 +59,10 @@ class Blocked(YouTubeError):
 
 class Unavailable(YouTubeError):
     """The video is private, deleted, members-only or otherwise unavailable."""
+
+
+class InvalidProxy(ValueError):
+    """VIDEO_TO_RAG_PROXY is not a proxy URL (a usage error); the message never shows it."""
 
 
 @dataclass(frozen=True)
@@ -139,16 +146,67 @@ def add_network_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _check_proxy(value: str) -> str:
+    """A well-formed proxy URL, so that every message can mask its credentials.
+
+    Without a scheme yt-dlp still uses the proxy but nothing recognises the credentials in its
+    messages; a raw "/", "?" or "#" in the password splits the URL in the wrong place.
+    """
+    try:
+        parts = urlsplit(value)
+        parts.port  # noqa: B018 -- raises ValueError for a port that is not a number
+    except ValueError:
+        parts = None
+    if (
+        parts is None
+        or parts.scheme.lower() not in PROXY_SCHEMES
+        or not parts.hostname
+        or parts.path not in ("", "/")
+        or parts.query
+        or parts.fragment
+        or any(c.isspace() for c in value)
+    ):
+        raise InvalidProxy(
+            f"{PROXY_ENV} is not a proxy URL: expected scheme://host:port (with user:password@ "
+            f"before the host for a login), scheme one of {', '.join(PROXY_SCHEMES)}, and reserved "
+            "characters in the user name and password percent-encoded (e.g. / as %2F). "
+            "Its value is not shown."
+        )
+    return value
+
+
 def network_from(args: argparse.Namespace, environ: Mapping[str, str]) -> Network:
+    proxy = (environ.get(PROXY_ENV) or "").strip() or None
     return Network(
         cookies_from_browser=args.cookies_from_browser,
         cookie_file=args.cookies,
-        proxy=(environ.get(PROXY_ENV) or "").strip() or None,
+        proxy=_check_proxy(proxy) if proxy else None,
     )
+
+
+def _proxy_display(proxy: str) -> str:
+    """scheme://host:port, without any credentials."""
+    parts = urlsplit(proxy)
+    host = f"[{parts.hostname}]" if ":" in (parts.hostname or "") else parts.hostname
+    return f"{parts.scheme}://{host}" + (f":{parts.port}" if parts.port else "")
+
+
+def _proxy_secrets(proxy: str | None) -> tuple[str, ...]:
+    """The proxy's credentials as they may appear in messages: raw and percent-decoded."""
+    if not proxy:
+        return ()
+    parts = urlsplit(proxy)
+    userinfo = parts.netloc.rpartition("@")[0]
+    password = parts.password or ""
+    candidates = {userinfo, unquote(userinfo), password, unquote(password)}
+    return tuple(s for s in candidates if len(s) >= MIN_SECRET_LENGTH)
 
 
 class _YtDlpLogger:
     """Routes yt-dlp's messages through our redacting logger; its errors come back as exceptions."""
+
+    def __init__(self, secrets: tuple[str, ...] = ()):
+        self._secrets = secrets
 
     def debug(self, msg: str) -> None:
         pass
@@ -157,10 +215,10 @@ class _YtDlpLogger:
         pass
 
     def warning(self, msg: str) -> None:
-        logger.warning("yt-dlp: %s", msg)
+        logger.warning("yt-dlp: %s", redact(msg, self._secrets))
 
     def error(self, msg: str) -> None:
-        logger.debug("yt-dlp: %s", msg)
+        logger.debug("yt-dlp: %s", redact(msg, self._secrets))
 
 
 def _default_factory() -> Callable[[dict], object]:
@@ -180,6 +238,7 @@ class YouTube:
         self.network = network
         self._factory = ydl_factory
         self._which = which
+        self._secrets = _proxy_secrets(network.proxy)
 
     def _params(self) -> dict:
         params = {
@@ -191,7 +250,7 @@ class YouTube:
             # happens. Never set ignore_no_formats_error: it turns the bot check, "Private video"
             # and the other playability errors into warnings.
             "format": "bestaudio/best",
-            "logger": _YtDlpLogger(),
+            "logger": _YtDlpLogger(self._secrets),
         }
         runtime = next(((n, p) for n in JS_RUNTIMES if (p := self._which(n))), None)
         if runtime:
@@ -231,11 +290,11 @@ class YouTube:
         return Transcript(video=video_from_info(info, track), segments=parse_json3(data))
 
     def _map_error(self, text: str) -> YouTubeError:
-        reason = redact(PREFIX_RE.sub("", text.strip()))
+        reason = redact(PREFIX_RE.sub("", text.strip()), self._secrets)
         lowered = reason.lower()
         if "confirm you" in lowered and "not a bot" in lowered:
             return Blocked(BLOCKED_MESSAGE + (EXPIRED_HINT if self.network.uses_cookies else ""))
         if any(marker in lowered for marker in UNAVAILABLE_MARKERS):
             return Unavailable(f"the video is unavailable: {reason}")
-        via = f" (via proxy {redact(self.network.proxy)})" if self.network.proxy else ""
+        via = f" (via proxy {_proxy_display(self.network.proxy)})" if self.network.proxy else ""
         return YouTubeError(f"YouTube request failed: {reason}{via}")

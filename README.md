@@ -46,8 +46,9 @@ first, then automatic) and replaces the video if it is already in the library.
 - `--cookies cookies.txt` — a Netscape-format cookie file. It is only read, never modified, and
   a malformed file is refused without showing its contents.
 - `VIDEO_TO_RAG_PROXY=http://host:port` in the environment — every YouTube request goes through
-  that proxy (credentials go in the URL; they are masked in every message). The proxy is never a
-  command-line option.
+  that proxy (credentials go in the URL, `http://user:password@host:port`, with reserved
+  characters percent-encoded, e.g. `/` as `%2F`; they are masked in every message). The proxy is
+  never a command-line option.
 
 **Search** — ask in any language; giving the question also in the videos' language helps.
 Every hit carries title, channel, date, time range, a timestamped `youtu.be` link and the passage

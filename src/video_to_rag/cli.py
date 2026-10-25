@@ -24,7 +24,14 @@ from .search import (
     validate_queries,
 )
 from .urls import InvalidUrl, UnsupportedUrl, video_id
-from .youtube import Network, YouTube, YouTubeError, add_network_arguments, network_from
+from .youtube import (
+    InvalidProxy,
+    Network,
+    YouTube,
+    YouTubeError,
+    add_network_arguments,
+    network_from,
+)
 
 EXIT_OK, EXIT_FAILURE, EXIT_USAGE = 0, 1, 2
 
@@ -111,13 +118,14 @@ def _ingest(
     embedder: Embedder,
 ) -> int:
     vid = video_id(args.url)
+    network = network_from(args, environ)
     path = library_path(getattr(args, "data_dir", None), environ)
     existing = Library.open_readonly(path, embedder.model_name)  # fail fast on a model mismatch
     if existing:
         existing.close()
 
     logger.info("fetching metadata and captions of %s", vid)
-    transcript = youtube(network_from(args, environ)).fetch(vid)
+    transcript = youtube(network).fetch(vid)
     video = transcript.video
     passages = chunk(transcript.segments, embedder.count_tokens)
     if not passages:
@@ -185,6 +193,8 @@ def main(
             return EXIT_OK
     except (InvalidUrl, UnsupportedUrl, InvalidQuery) as error:
         parser.print_usage(sys.stderr)
+        return _fail(str(error), EXIT_USAGE)
+    except InvalidProxy as error:
         return _fail(str(error), EXIT_USAGE)
     except (YouTubeError, NoCaptions, LibraryError) as error:
         return _fail(str(error))

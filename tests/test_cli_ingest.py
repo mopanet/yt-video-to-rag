@@ -185,6 +185,17 @@ def test_ingest_usage_error_makes_no_request(tmp_path, capsys, args, expected):
     assert not (tmp_path / "library.sqlite3").exists()
 
 
+def test_ingest_invalid_proxy_is_a_usage_error_before_any_request(tmp_path, capsys):
+    youtube = FakeYouTube(two_hour_transcript())
+    environ = {"VIDEO_TO_RAG_PROXY": "alice:s3cret@proxy.example:8080"}
+    assert run(["ingest", URL], tmp_path, youtube, environ=environ) == 2
+    err = capsys.readouterr().err
+    assert "VIDEO_TO_RAG_PROXY" in err and "scheme://host:port" in err
+    assert "s3cret" not in err
+    assert youtube.networks == []
+    assert not (tmp_path / "library.sqlite3").exists()
+
+
 # --- Network options reach the adapter; credentials stay out of the library -------------
 
 
