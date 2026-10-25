@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import sqlite3
 
 import pytest
@@ -134,6 +135,14 @@ def test_ingest_failure_leaves_library_unchanged(filled, tmp_path, capsys, error
     assert run(["ingest", URL], tmp_path, FakeYouTube(error)) == 1
     assert expected in capsys.readouterr().err
     assert digest(path) == before
+
+
+def test_ingest_captions_without_speech(tmp_path, capsys):
+    info = load_fixture("info_auto_only.json")
+    silent = Transcript(video=video_from_info(info, select_track(info)), segments=[])
+    assert run(["ingest", URL], tmp_path, FakeYouTube(silent)) == 1
+    assert "no speech" in capsys.readouterr().err
+    assert not (tmp_path / "library.sqlite3").exists()
 
 
 def test_ingest_failure_creates_no_library(tmp_path):
@@ -276,6 +285,36 @@ def test_ingest_no_cookies_in_the_library(tmp_path):
         assert secret not in stored
 
 
+def test_ingest_never_shows_cookies_or_proxy_credentials(tmp_path, capsys, caplog, monkeypatch):
+    monkeypatch.setattr("video_to_rag.cli._configure_logging", lambda: None)  # keep DEBUG
+    info = load_fixture("info_manual_and_auto.json")
+    info["http_headers"] = {"Cookie": "SID=s3cr3tSidValue"}
+    factory = FakeYDLFactory(info=info)
+
+    class ChattyFactory:
+        """yt-dlp warns with the proxy URL in its message, as it does on retries."""
+
+        def __call__(self, params):
+            params["logger"].warning("retrying through http://alice:s3cret@proxy.example:8080")
+            params["logger"].error("giving up on http://alice:s3cret@proxy.example:8080")
+            return factory(params)
+
+    def youtube(network):
+        return YouTube(network, ydl_factory=ChattyFactory(), which=which_all)
+
+    environ = {"VIDEO_TO_RAG_PROXY": "http://alice:s3cret@proxy.example:8080"}
+    with caplog.at_level(logging.DEBUG, logger="video_to_rag"):
+        code = run(["ingest", URL, "--cookies", COOKIES], tmp_path, youtube, environ=environ)
+    assert code == 0
+    shown = capsys.readouterr()
+    everything = shown.out + shown.err + caplog.text
+    assert "retrying through" in everything  # the warning itself is shown, masked
+    for secret in ("s3cr3tSidValue", "FAKE_SID_VALUE", "alice", "s3cret"):
+        assert secret not in everything
+    for option in ("cookiefile", "noplaylist"):  # the options dict is never logged
+        assert option not in everything
+
+
 # --- Library location through the command ------------------------------------------------
 
 
@@ -290,6 +329,21 @@ def test_ingest_default_location(tmp_path, monkeypatch):
     )
     assert code == 0
     assert (tmp_path / ".local" / "share" / "video-to-rag" / "library.sqlite3").is_file()
+
+
+def test_ingest_environment_override(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    env_dir = tmp_path / "srv" / "vtr"
+    code = main(
+        ["ingest", URL],
+        environ={HOME_ENV: str(env_dir)},
+        youtube=FakeYouTube(two_hour_transcript()),
+        embedder=FakeEmbedder(),
+    )
+    assert code == 0
+    assert (env_dir / "library.sqlite3").is_file()
+    assert not (tmp_path / "home").exists()
 
 
 def test_ingest_option_beats_environment(tmp_path):

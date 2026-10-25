@@ -267,6 +267,27 @@ def test_model_mismatch_refused_for_reading(tmp_path):
         Library.open_readonly(path, "other/model-y")
 
 
+def test_schema_version_mismatch_refused(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    open_rw(path).close()
+    raw = sqlite3.connect(path)
+    raw.execute("UPDATE meta SET value = '0' WHERE key = 'schema_version'")
+    raw.commit()
+    raw.close()
+    before = digest(path)
+    with pytest.raises(LibraryError, match="schema version 0"):
+        open_rw(path)
+    with pytest.raises(LibraryError, match="schema version 0"):
+        Library.open_readonly(path, EMBEDDER.model_name)
+    assert digest(path) == before
+
+
+def test_readonly_open_of_a_file_without_schema_is_an_empty_library(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    path.touch()  # e.g. left behind by a first ingest that failed while creating it
+    assert Library.open_readonly(path, EMBEDDER.model_name) is None
+
+
 def test_readonly_open_never_creates_the_library(tmp_path):
     path = tmp_path / "data" / "library.sqlite3"
     assert Library.open_readonly(path, EMBEDDER.model_name) is None

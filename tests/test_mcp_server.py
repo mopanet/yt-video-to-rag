@@ -144,13 +144,21 @@ async def test_invalid_input_keeps_the_server_alive(library_path):
 
 
 @pytest.mark.anyio
-async def test_limit_rules_match_the_search_command(library_path):
-    async with Client(build_server(library_path, FakeEmbedder())) as client:
+async def test_limit_rules_match_the_search_command(tmp_path):
+    embedder = FakeEmbedder()
+    path = tmp_path / "library.sqlite3"
+    library = Library.open_for_write(path, embedder.model_name, embedder.dim)
+    texts = [f"focus tip number {i}" for i in range(25)]  # more than the cap of 20
+    video = Video("abc123DEF45", "T", "UC_A", "Chan", "2024-03-11", 300, "en", "auto")
+    passages = [Passage(i, i * 10.0, i * 10.0 + 10, t) for i, t in enumerate(texts)]
+    library.store(video, passages, embedder.embed_passages(texts))
+    library.close()
+    async with Client(build_server(path, embedder)) as client:
         default = await client.call_tool("search", {"queries": ["focus"]})
         capped = await client.call_tool("search", {"queries": ["focus"], "limit": 50})
         zero = await client.call_tool("search", {"queries": ["focus"], "limit": 0})
-    assert len(default.structured_content["hits"]) == len(TEXTS)  # all 7, under the default 8
-    assert len(capped.structured_content["hits"]) == len(TEXTS)
+    assert len(default.structured_content["hits"]) == 8
+    assert len(capped.structured_content["hits"]) == 20
     assert zero.is_error and "limit" in text_of(zero)
 
 

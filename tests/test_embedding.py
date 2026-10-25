@@ -54,6 +54,29 @@ def test_e5_announces_the_first_download(tmp_path, caplog, monkeypatch):
     assert "2.2 GB" in caplog.text
 
 
+def test_e5_prefixes_and_normalizes(tmp_path, monkeypatch):
+    seen = []
+
+    class FakeTextEmbedding:
+        def __init__(self, model_name, **kwargs):
+            pass
+
+        def embed(self, texts, **kwargs):
+            seen.extend(texts)
+            three_four = np.zeros(MODEL_DIM, np.float32)
+            three_four[:2] = [3.0, 4.0]
+            return [three_four, np.zeros(MODEL_DIM, np.float32)][: len(texts)]
+
+    monkeypatch.setattr("fastembed.TextEmbedding", FakeTextEmbedding)
+    e5 = E5Embedder(cache_dir=tmp_path)
+    assert e5.embed_passages([]).shape == (0, MODEL_DIM)
+    queries = e5.embed_queries(["focus", "x"])
+    e5.embed_passages(["text"])
+    assert seen == ["query: focus", "query: x", "passage: text"]
+    np.testing.assert_allclose(queries[0][:2], [0.6, 0.8])
+    assert not np.isnan(queries).any()  # a zero vector stays zero, never NaN
+
+
 def test_e5_embeds_in_small_batches(tmp_path, monkeypatch):
     # fastembed's default batch of 256 pads a whole long video into one ONNX run (OOM).
     batch_sizes = []
@@ -139,6 +162,7 @@ def test_e5_every_passage_fits_the_model_input(e5):
     from tokenizers import Tokenizer
 
     # An independent, untruncated count of what the model would see, special tokens included.
+    e5.count_tokens("warm up")  # makes sure the model (and its tokenizer.json) is in the cache
     tokenizer_file = next(model_cache_dir().glob("models--*e5-large*/snapshots/*/tokenizer.json"))
     tokenizer = Tokenizer.from_file(str(tokenizer_file))
     tokenizer.no_truncation()
