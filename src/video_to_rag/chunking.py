@@ -3,11 +3,12 @@
 Greedy over segments: a passage closes once it spans >= 60 s or holds >= 320 tokens, and never
 exceeds 480 tokens (E5's input limit is 512, including the `passage: ` prefix). The next passage
 starts with the trailing segments that cover the last >= 10 s (at least one segment, as long as
-the bound allows). A single segment over the bound is split at word boundaries, each part keeping
-the segment's times. `count_tokens` is the model's own tokenizer in production.
+the bound allows) and reaches past them. A single segment over the bound is split at word
+boundaries, a single word over it (a script written without spaces, a long URL) at characters;
+each part keeps the segment's times. `count_tokens` is the model's own tokenizer in production.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 
 from .captions import Segment
@@ -32,11 +33,26 @@ def _join(units: Sequence[Segment]) -> str:
     return " ".join(u.text for u in units)
 
 
+def _words(text: str, count_tokens: CountTokens, max_tokens: int) -> Iterator[str]:
+    """The text's words, a word over the bound on its own cut into pieces that fit."""
+    for word in text.split():
+        if count_tokens(word) <= max_tokens:
+            yield word
+            continue
+        piece = ""
+        for char in word:
+            if piece and count_tokens(piece + char) > max_tokens:
+                yield piece
+                piece = ""
+            piece += char
+        yield piece
+
+
 def _split(segment: Segment, count_tokens: CountTokens, max_tokens: int) -> list[Segment]:
     if count_tokens(segment.text) <= max_tokens:
         return [segment]
     parts: list[list[str]] = [[]]
-    for word in segment.text.split():
+    for word in _words(segment.text, count_tokens, max_tokens):
         if parts[-1] and count_tokens(" ".join([*parts[-1], word])) > max_tokens:
             parts.append([])
         parts[-1].append(word)
@@ -46,11 +62,14 @@ def _split(segment: Segment, count_tokens: CountTokens, max_tokens: int) -> list
 def _overlap_start(
     units: Sequence[Segment], first: int, last: int, count_tokens: CountTokens, max_tokens: int
 ) -> int:
-    """Index the next passage starts at: the tail covering the last OVERLAP_SECONDS."""
+    """Index the next passage starts at: the tail covering the last OVERLAP_SECONDS.
+
+    For a one-segment passage that is the segment itself; `chunk` then makes the next passage
+    reach past it, so the overlap never stalls.
+    """
     k = last
     while k - 1 > first and units[last].end - units[k].start < OVERLAP_SECONDS:
         k -= 1
-    k = max(k, first + 1)  # always make progress
     while k <= last and count_tokens(_join(units[k : last + 2])) > max_tokens:
         k += 1  # the tail plus the next segment must still fit the bound
     return k
@@ -61,12 +80,13 @@ def chunk(
 ) -> list[Passage]:
     units = [part for s in segments for part in _split(s, count_tokens, max_tokens)]
     passages: list[Passage] = []
-    first = 0
+    first = reach = 0  # a passage holds at least units[first..reach] (bound permitting)
     while first < len(units):
         last = first
         tokens = count_tokens(units[first].text)
         while last + 1 < len(units):
-            if units[last].end - units[first].start >= MAX_SECONDS or tokens >= TARGET_TOKENS:
+            full = units[last].end - units[first].start >= MAX_SECONDS or tokens >= TARGET_TOKENS
+            if full and last >= reach:
                 break
             candidate = count_tokens(_join(units[first : last + 2]))
             if candidate > max_tokens:
@@ -76,5 +96,8 @@ def chunk(
         passages.append(Passage(len(passages), group[0].start, group[-1].end, _join(group)))
         if last + 1 >= len(units):
             break
-        first = _overlap_start(units, first, last, count_tokens, max_tokens)
+        start = _overlap_start(units, first, last, count_tokens, max_tokens)
+        if last < reach:  # the bound stopped it short of `reach`: move on, or it could repeat
+            start = max(start, first + 1)
+        first, reach = start, last + 1
     return passages

@@ -59,6 +59,24 @@ def test_neighbouring_passages_overlap():
         assert before.end - after.start >= 10  # the overlap covers at least the last 10 s
 
 
+def test_neighbouring_passages_overlap_after_long_segments():
+    # Each segment alone spans more than MAX_SECONDS, so every passage closes after it; the
+    # next passage must still start with it.
+    segments = transcript(4, seconds=70.0, words_per_segment=3)
+    passages = chunk(segments, words)
+    assert len(passages) > 1
+    for before, after in zip(passages, passages[1:], strict=False):
+        last = next(s for s in segments if s.end == before.end)
+        assert after.start == last.start and after.text.startswith(last.text)
+    assert passages[-1].end == segments[-1].end
+
+
+def test_no_overlap_only_where_two_segments_exceed_the_bound():
+    segments = transcript(4, seconds=20.0, words_per_segment=250)  # 2 x 250 > 480
+    passages = chunk(segments, words)
+    assert [p.text for p in passages] == [s.text for s in segments]
+
+
 def test_passage_closes_at_target_tokens_and_never_exceeds_the_bound():
     segments = transcript(40, seconds=1.0, words_per_segment=100)
     passages = chunk(segments, words)
@@ -89,6 +107,16 @@ def test_oversized_segment_split_at_word_boundaries():
         assert word in stored
     giant_parts = [p for p in passages if "w0500" in p.text or "w0999" in p.text]
     assert all(p.start <= 100.0 and p.end >= 160.0 for p in giant_parts)
+
+
+def test_oversized_segment_without_spaces_is_cut_within_the_bound():
+    # A script written without spaces (or a long URL) is one "word" over the bound.
+    text = "字" * 1000
+    passages = chunk([Segment(10.0, 20.0, text)], len, max_tokens=480)
+    assert len(passages) == 3
+    assert all(len(p.text) <= 480 for p in passages)
+    assert all((p.start, p.end) == (10.0, 20.0) for p in passages)
+    assert "".join(p.text for p in passages) == text
 
 
 @pytest.mark.parametrize("limit", [5, 7, 480])

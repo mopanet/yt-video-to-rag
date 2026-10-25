@@ -29,7 +29,8 @@ The library SHALL be a single file in the operating system's per-user data direc
 Each transcript SHALL be stored as passages of consecutive segments, in order. A passage's start
 and end SHALL be the start of its first and the end of its last segment, and its text the segments'
 text verbatim. Consecutive passages SHALL overlap by at least one segment so that no sentence is
-only ever seen cut in half.
+only ever seen cut in half, except where that segment and the next one together exceed the passage
+size bound (the bound wins).
 
 #### Scenario: Whole transcript covered in order
 - **WHEN** a transcript is stored
@@ -40,13 +41,14 @@ only ever seen cut in half.
 - **THEN** the passage's start is 600.0 s and its end is 671.4 s
 
 #### Scenario: Neighbouring passages overlap
-- **WHEN** a transcript yields more than one passage
-- **THEN** each passage's last segment also appears at the beginning of the next passage
+- **WHEN** a transcript yields more than one passage, and no two consecutive segments together exceed the passage size bound
+- **THEN** each passage's last segment also appears at the beginning of the next passage, also when a single segment spans more than a minute
 
 ### Requirement: Passage size bound
 A passage SHALL never exceed the input limit of the embedding model, so that no text is silently
 cut off before it is embedded. A single segment longer than the limit SHALL be split into parts at
-word boundaries, each part keeping the segment's start and end times.
+word boundaries (a single word longer than the limit, as in a script written without spaces, at
+character boundaries), each part keeping the segment's start and end times.
 
 #### Scenario: Oversized segment
 - **WHEN** a caption segment holds more words than fit the model's input limit
