@@ -302,7 +302,7 @@ class YouTube:
             raise self._map_error(str(error)) from None
         try:
             segments = parse_json3(json.loads(raw))
-        except (ValueError, KeyError, TypeError, AttributeError, RecursionError):  # not json3
+        except (ValueError, KeyError, TypeError, AttributeError, RecursionError, OverflowError):
             raise YouTubeError("YouTube returned captions that could not be read") from None
         return Transcript(video=video_from_info(info, track), segments=segments)
 

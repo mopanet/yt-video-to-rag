@@ -397,8 +397,9 @@ class RawCaptions(Factory):
         b'{"events": [42]}',
         b'["not", "an", "object"]',
         b"[" * 100_000,
+        b'{"events": [{"tStartMs": 1' + b"0" * 400 + b', "segs": [{"utf8": "x"}]}]}',
     ],
-    ids=["html", "bytes", "no-start", "event-not-object", "array", "deeply-nested"],
+    ids=["html", "bytes", "no-start", "event-not-object", "array", "deeply-nested", "huge-number"],
 )
 def test_error_unreadable_captions(raw):
     youtube = YouTube(Network(), ydl_factory=RawCaptions(raw), which=which_all)

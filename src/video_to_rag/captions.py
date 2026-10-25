@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 
 ANNOTATION_RE = re.compile(r"\[[^\]]*\]")
 WHITESPACE_RE = re.compile(r"\s+")
+SURROGATE_RE = re.compile(r"[\ud800-\udfff]")  # unpaired: JSON allows them, nothing else does
 ORIG_SUFFIX = "-orig"
 
 
@@ -120,6 +121,7 @@ def select_track(info: dict) -> CaptionTrack:
 
 
 def _clean(text: str) -> str:
+    text = SURROGATE_RE.sub("", text)
     return WHITESPACE_RE.sub(" ", ANNOTATION_RE.sub(" ", text)).strip()
 
 

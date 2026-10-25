@@ -148,6 +148,12 @@ def test_parse_annotations_removed_and_empty_segments_dropped():
     assert parse_json3(data) == [Segment(start=3.0, end=5.5, text="so let's begin")]
 
 
+def test_parse_drops_unpaired_surrogates():
+    # JSON can carry "\ud800"; such text breaks the tokenizer, SQLite and printing alike.
+    event = {"tStartMs": 0, "dDurationMs": 1000, "segs": [{"utf8": "hello \ud800world"}]}
+    assert parse_json3({"events": [event]}) == [Segment(start=0.0, end=1.0, text="hello world")]
+
+
 def test_parse_asr_events_end_clamped_to_next_start():
     segments = parse_json3(load_fixture("captions_asr.json3"))
     assert [s.text for s in segments] == [
