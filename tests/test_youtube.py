@@ -110,6 +110,19 @@ def test_mode_malformed_cookie_file_rejected_without_showing_it(tmp_path, capsys
     assert "FAKEVALUE123" not in err and "SID" not in err
 
 
+def test_mode_cookie_file_is_read_once(tmp_path):
+    # yt-dlp gets exactly the checked text: a line written after the check never reaches it
+    # (and a pipe such as --cookies <(...) can only be read once anyway).
+    cookies = tmp_path / "cookies.txt"
+    checked = (FIXTURES / "netscape_cookies.txt").read_text()
+    cookies.write_text(checked)
+    network = parse(["--cookies", str(cookies)])
+    cookies.write_text(checked + ".youtube.com TRUE / TRUE 0 SAPISID FAKEVALUE123\n")
+    factory, _ = fetch(network)
+    assert factory.params["cookiefile"].getvalue() == checked
+    assert "FAKEVALUE123" not in repr(network)
+
+
 def test_mode_cookie_file_without_header_rejected(tmp_path, capsys):
     cookies = tmp_path / "cookies.txt"
     cookies.write_text('[{"name": "SID", "value": "FAKEVALUE123"}]\n')  # a JSON export

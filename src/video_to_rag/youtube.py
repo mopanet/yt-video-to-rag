@@ -13,7 +13,7 @@ import re
 import shutil
 import warnings
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -75,9 +75,17 @@ class InvalidProxy(ValueError):
 
 
 @dataclass(frozen=True)
+class CookieFile:
+    """A checked Netscape cookie file: read once, so yt-dlp gets exactly what was checked."""
+
+    path: str
+    text: str = field(repr=False)
+
+
+@dataclass(frozen=True)
 class Network:
     cookies_from_browser: tuple[str, str | None] | None = None  # (browser, profile)
-    cookie_file: str | None = None
+    cookie_file: CookieFile | None = None
     proxy: str | None = None  # only ever from VIDEO_TO_RAG_PROXY
 
     @property
@@ -123,7 +131,7 @@ def _cookie_problem(text: str) -> str | None:
     return None
 
 
-def _cookie_file(value: str) -> str:
+def _cookie_file(value: str) -> CookieFile:
     try:
         text = Path(value).read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -135,7 +143,7 @@ def _cookie_file(value: str) -> str:
             f"{value} is not a Netscape-format cookie file: {problem} "
             "(its contents are never shown)"
         )
-    return value
+    return CookieFile(value, text)
 
 
 def add_network_arguments(parser: argparse.ArgumentParser) -> None:
@@ -275,9 +283,7 @@ class YouTube:
         if self.network.cookie_file:
             # An in-memory copy: yt-dlp saves the jar back on close, which would rewrite the
             # user's credential file (and fail on a read-only one).
-            params["cookiefile"] = io.StringIO(
-                Path(self.network.cookie_file).read_text(encoding="utf-8")
-            )
+            params["cookiefile"] = io.StringIO(self.network.cookie_file.text)
         # "" is yt-dlp's "no proxy"; without the key it would use HTTP(S)_PROXY / ALL_PROXY.
         params["proxy"] = self.network.proxy or ""
         return params
