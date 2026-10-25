@@ -12,6 +12,9 @@ from .redact import logger
 MODEL_NAME = "intfloat/multilingual-e5-large"
 MODEL_DIM = 1024
 MODEL_CACHE_ENTRY = "models--Qdrant--multilingual-e5-large-onnx"  # fastembed's HF-hub layout
+# Texts per ONNX run. fastembed's default (256) pads a whole long video into one run, and its
+# memory grows with that; 16 keeps a 3-hour ingest near 2 GB at the same speed on CPU.
+EMBED_BATCH = 16
 
 
 @runtime_checkable
@@ -63,7 +66,8 @@ class E5Embedder:
     def _embed(self, prefix: str, texts: Sequence[str]) -> np.ndarray:
         if not texts:
             return np.zeros((0, self.dim), dtype=np.float32)
-        vectors = np.array(list(self._load().embed([prefix + t for t in texts])), np.float32)
+        prefixed = [prefix + t for t in texts]
+        vectors = np.array(list(self._load().embed(prefixed, batch_size=EMBED_BATCH)), np.float32)
         return _normalized(vectors)
 
     def embed_queries(self, texts: Sequence[str]) -> np.ndarray:

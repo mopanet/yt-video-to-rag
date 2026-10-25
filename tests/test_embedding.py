@@ -44,6 +44,23 @@ def test_e5_announces_the_first_download(tmp_path, caplog, monkeypatch):
     assert "2.2 GB" in caplog.text
 
 
+def test_e5_embeds_in_small_batches(tmp_path, monkeypatch):
+    # fastembed's default batch of 256 pads a whole long video into one ONNX run (OOM).
+    batch_sizes = []
+
+    class FakeTextEmbedding:
+        def __init__(self, model_name, **kwargs):
+            pass
+
+        def embed(self, texts, batch_size=256, **kwargs):
+            batch_sizes.append(batch_size)
+            return [np.ones(MODEL_DIM, np.float32) for _ in texts]
+
+    monkeypatch.setattr("fastembed.TextEmbedding", FakeTextEmbedding)
+    E5Embedder(cache_dir=tmp_path).embed_passages(["a passage"] * 216)  # a 3-hour video
+    assert batch_sizes and max(batch_sizes) <= 16
+
+
 # --- Real model (downloads ~2.2 GB on first use) -----------------------------------------
 
 SENTENCES = [
