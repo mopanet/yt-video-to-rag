@@ -269,8 +269,8 @@ class YouTube:
             params["cookiefile"] = io.StringIO(
                 Path(self.network.cookie_file).read_text(encoding="utf-8")
             )
-        if self.network.proxy:
-            params["proxy"] = self.network.proxy
+        # "" is yt-dlp's "no proxy"; without the key it would use HTTP(S)_PROXY / ALL_PROXY.
+        params["proxy"] = self.network.proxy or ""
         return params
 
     def fetch(self, video_id: str) -> Transcript:

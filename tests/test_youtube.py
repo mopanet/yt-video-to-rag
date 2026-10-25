@@ -47,10 +47,19 @@ def test_mode_direct_by_default():
     params = factory.params
     assert params["skip_download"] is True
     assert params["noplaylist"] is True
-    assert not {"cookiefile", "cookiesfrombrowser", "proxy"} & params.keys()
+    assert not {"cookiefile", "cookiesfrombrowser"} & params.keys()
     assert factory.instances[0].extracted == [(f"https://www.youtube.com/watch?v={VIDEO}", False)]
     assert transcript.video.id == VIDEO
     assert transcript.segments
+
+
+def test_mode_direct_ignores_proxy_variables_of_the_environment(monkeypatch):
+    # Without VIDEO_TO_RAG_PROXY yt-dlp would fall back to HTTP(S)_PROXY / ALL_PROXY and send
+    # the requests, cookies included, through whatever proxy the environment names.
+    monkeypatch.setenv("HTTPS_PROXY", "http://other.example:3128")
+    monkeypatch.setenv("ALL_PROXY", "socks5://other.example:1080")
+    factory, _ = fetch(parse([]))
+    assert YoutubeDL(factory.params).proxies == {"all": "__noproxy__"}
 
 
 def test_error_playability_errors_stay_errors():

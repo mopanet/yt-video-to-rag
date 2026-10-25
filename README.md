@@ -38,8 +38,9 @@ Ingest takes a single video URL (`watch?v=`, `youtu.be/`, `shorts/`, `live/`); c
 playlist URLs are not supported yet. It uses the captions in the spoken language (uploader-made
 first, then automatic) and replaces the video if it is already in the library.
 
-**Network modes** — direct by default. When YouTube answers "Sign in to confirm you're not a bot"
-(typical from cloud or VPN addresses):
+**Network modes** — direct by default (the usual `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY`
+variables are ignored; a proxy is only ever `VIDEO_TO_RAG_PROXY`). When YouTube answers "Sign in
+to confirm you're not a bot" (typical from cloud or VPN addresses):
 - `--cookies-from-browser firefox` (or `chrome:Default`, …) — the cookies of a browser profile
   that is logged in to YouTube. Use a separate Google account: cookie use can get an account
   flagged.
