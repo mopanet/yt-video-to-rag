@@ -10,7 +10,11 @@ branch (BASE_BRANCH, then dev, then main; `origin/<b>` before the local `<b>`).
 
 Mapping (import-based): a changed test file (tests/**/test_*.py) selects itself; a changed
 `src/video_to_rag/a/b.py` selects every test that imports `video_to_rag.a.b` DIRECTLY
-(no transitive closure; the full suite covers the deep blast radius).
+(no transitive closure; the full suite covers the deep blast radius); a changed test helper
+(`tests/helpers.py`, imported as `helpers`) selects the tests that import it; a changed
+`scripts/x.py` selects `tests/test_x.py`; a change to shared test setup (`tests/conftest.py`,
+`tests/fixtures/`) or to the dependencies (`pyproject.toml`, `uv.lock`, `package.json`)
+selects every test.
 
 Usage: affected_tests.py          print affected test paths, one per line
        affected_tests.py --run    run `pytest` on them (exit 0 when none)
@@ -28,6 +32,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path, PurePosixPath
 
 BRANCH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
+EVERY_TEST = ("tests/conftest.py", "pyproject.toml", "uv.lock", "package.json")
 
 
 def is_test_path(path: str) -> bool:
@@ -35,15 +40,33 @@ def is_test_path(path: str) -> bool:
     return p.parts[:1] == ("tests",) and p.name.startswith("test_") and p.suffix == ".py"
 
 
+def selects_every_test(path: str) -> bool:
+    """Shared test setup and the dependencies can break any test."""
+    return path in EVERY_TEST or path.startswith("tests/fixtures/")
+
+
 def module_name(path: str) -> str | None:
-    """Map `src/video_to_rag/a/b.py` to `video_to_rag.a.b` (None when not a package module)."""
+    """Map `src/video_to_rag/a/b.py` to `video_to_rag.a.b`, and a test helper such as
+    `tests/helpers.py` to `helpers` (pytest puts tests/ on sys.path); None otherwise."""
     p = PurePosixPath(path)
-    if p.suffix != ".py" or p.parts[:2] != ("src", "video_to_rag"):
+    if p.suffix != ".py":
+        return None
+    if p.parent == PurePosixPath("tests") and not is_test_path(path) and p.stem != "conftest":
+        return p.stem
+    if p.parts[:2] != ("src", "video_to_rag"):
         return None
     parts = list(p.with_suffix("").parts[1:])
     if parts[-1] == "__init__":
         parts.pop()
     return ".".join(parts)
+
+
+def script_test(path: str) -> str | None:
+    """`scripts/x.py` -> `tests/test_x.py` (its test loads it by path, not by import)."""
+    p = PurePosixPath(path)
+    if p.parent == PurePosixPath("scripts") and p.suffix == ".py":
+        return f"tests/test_{p.name}"
+    return None
 
 
 def imported_modules(source: str) -> set[str]:
@@ -72,8 +95,11 @@ def affected_tests(
     read: Callable[[str], str | None],
 ) -> list[str]:
     """Sorted test paths affected by `changed`. `read(path)` returns source or None if missing."""
-    changed = set(changed)
+    changed, tests = set(changed), set(tests)
+    if any(selects_every_test(c) for c in changed):
+        return sorted(t for t in tests if read(t) is not None)
     affected = {c for c in changed if is_test_path(c) and read(c) is not None}
+    affected |= {t for c in changed if (t := script_test(c)) in tests and read(t) is not None}
     changed_modules = {m for c in changed if (m := module_name(c))}
     for test in set(tests) - affected:
         source = read(test)

@@ -106,8 +106,10 @@ npm run gates:dev   # Ruff lint of CHANGED files + affected tests only
 ```
 Both halves are scoped to what you changed: `check:affected` lints only the changed files (so a
 pre-existing issue elsewhere never blocks you), and `test:affected` runs only the tests that import
-a changed source (working tree by default; `AFFECTED_SCOPE=branch` for the whole branch). Seconds,
-not the whole suite. Nothing changed = pass.
+a changed source or test helper (working tree by default; `AFFECTED_SCOPE=branch` for the whole
+branch); a change to shared test setup (`tests/conftest.py`, `tests/fixtures/`) or to the
+dependencies (`pyproject.toml`, `uv.lock`, `package.json`) runs every test. Seconds, not the whole
+suite. Nothing changed = pass.
 
 **Full gate — once, at the base-branch merge (and in CI):**
 ```bash

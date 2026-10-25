@@ -117,6 +117,39 @@ def test_affected_tests_skips_unparseable_and_missing_tests():
     assert result == []
 
 
+def test_affected_tests_selects_tests_using_a_changed_helper():
+    files = {
+        "tests/test_a.py": "from helpers import FakeEmbedder\n",
+        "tests/test_b.py": "x = 1\n",
+        "tests/helpers.py": "class FakeEmbedder: ...\n",
+    }
+    result = at.affected_tests(
+        ["tests/helpers.py"], ["tests/test_a.py", "tests/test_b.py"], _reader(files)
+    )
+    assert result == ["tests/test_a.py"]
+
+
+@pytest.mark.parametrize(
+    "changed",
+    [
+        "tests/conftest.py",
+        "tests/fixtures/info_x.json",
+        "pyproject.toml",
+        "uv.lock",
+        "package.json",
+    ],
+)
+def test_affected_tests_runs_everything_for_shared_setup_and_dependencies(changed):
+    files = {"tests/test_a.py": "import video_to_rag.a\n", "tests/test_b.py": "x = 1\n"}
+    assert at.affected_tests([changed], list(files), _reader(files)) == sorted(files)
+
+
+def test_affected_tests_selects_the_test_of_a_changed_script():
+    files = {"tests/test_affected_tests.py": "SCRIPT = 'scripts/affected_tests.py'\n"}
+    result = at.affected_tests(["scripts/affected_tests.py"], list(files), _reader(files))
+    assert result == ["tests/test_affected_tests.py"]
+
+
 def test_affected_tests_output_is_sorted_and_deduplicated():
     files = {
         "tests/test_b.py": "import video_to_rag.foo\n",
