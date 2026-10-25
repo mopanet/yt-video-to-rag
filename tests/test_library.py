@@ -1,6 +1,7 @@
 import hashlib
 import sqlite3
 import threading
+from pathlib import Path
 
 import pytest
 from helpers import FakeEmbedder
@@ -227,6 +228,19 @@ def test_discard_keeps_a_library_it_did_not_create(tmp_path):
     open_rw(path).close()
     assert open_rw(path).discard_if_new_and_empty() is False
     assert path.is_file()
+
+
+def test_discard_never_deletes_a_library_that_replaced_its_file(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    first = open_rw(path)  # a first ingest that is about to fail
+    for suffix in ("", "-wal", "-shm"):
+        Path(f"{path}{suffix}").unlink(missing_ok=True)  # e.g. a manual rm or a restore
+    other = open_rw(path)  # a new library at the same path, with a video in it
+    store(other, video(), passages("stored in the replacement"))
+    other.close()
+    assert first.discard_if_new_and_empty() is False
+    library = Library.open_readonly(path, EMBEDDER.model_name)
+    assert library.video_count() == 1
 
 
 def test_store_into_a_removed_library_fails_loudly(tmp_path):

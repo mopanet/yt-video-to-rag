@@ -239,12 +239,13 @@ class Library:
         try:
             if self.created:
                 self.conn.execute("BEGIN IMMEDIATE")
+                self._ensure_same_file()  # the path may now hold another library: keep it
                 if self.video_count() == 0:
                     for suffix in SQLITE_SUFFIXES:
                         Path(f"{self.path}{suffix}").unlink(missing_ok=True)
                     discarded = True
                 self._rollback()
-        except (sqlite3.Error, OSError):
+        except (sqlite3.Error, OSError, LibraryError):
             pass  # keep the library; the caller reports the original failure
         finally:
             self.close()
