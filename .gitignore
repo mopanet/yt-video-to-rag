@@ -17,6 +17,7 @@ __pycache__/
 *.sqlite3
 
 # Credentials: YouTube cookie exports, and files handed over with `devup paste`
-cookies*.txt
+*cookies*.txt
 *.cookies
 .dev/inbox/
+!tests/fixtures/netscape_cookies.txt
