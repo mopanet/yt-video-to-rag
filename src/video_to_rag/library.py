@@ -7,6 +7,7 @@ different embedding model before touching anything.
 
 import os
 import sqlite3
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -21,7 +22,9 @@ from .chunking import Passage
 
 HOME_ENV = "VIDEO_TO_RAG_HOME"
 FILE_NAME = "library.sqlite3"
+SQLITE_SUFFIXES = ("", "-wal", "-shm", "-journal")  # the files SQLite keeps for one database
 SCHEMA_VERSION = "1"
+WAL_SWITCH_SECONDS = 5.0  # as long as sqlite3's default busy timeout
 
 
 class LibraryError(Exception):
@@ -104,6 +107,8 @@ class Library:
     def __init__(self, conn: sqlite3.Connection, path: Path):
         self.conn = conn
         self.path = path
+        self.created = False  # this connection created the schema
+        self._inode = path.stat().st_ino
 
     # --- opening -------------------------------------------------------------------------
 
@@ -112,10 +117,10 @@ class Library:
         path.parent.mkdir(parents=True, exist_ok=True)
         library = cls(_connect(str(path)), path)
         try:
-            if library._has_schema():
+            library._ensure_wal()
+            library.created = library._create_if_missing(model_name, dim)
+            if not library.created:
                 library._check(model_name)
-            else:
-                library._create(model_name, dim)
             library.conn.execute("PRAGMA foreign_keys = ON")
         except BaseException:
             library.close()
@@ -162,10 +167,16 @@ class Library:
                 f"{model_name}; re-indexing is not available yet, so the library was left unchanged"
             )
 
-    def _create(self, model_name: str, dim: int) -> None:
-        self.conn.execute("PRAGMA journal_mode = WAL")
+    def _create_if_missing(self, model_name: str, dim: int) -> bool:
+        """Create the schema unless it exists; True when this call created it.
+
+        The check runs under the write lock, so two first ingests never both create it.
+        """
         self.conn.execute("BEGIN IMMEDIATE")
         try:
+            if self._has_schema():
+                self.conn.execute("ROLLBACK")
+                return False
             # One statement at a time: executescript() would COMMIT the open transaction.
             for statement in filter(str.strip, _schema(dim).split(";")):
                 self.conn.execute(statement)
@@ -179,8 +190,61 @@ class Library:
             )
             self.conn.execute("COMMIT")
         except BaseException:
-            self.conn.execute("ROLLBACK")
+            self._rollback()
             raise
+        return True
+
+    def _ensure_wal(self) -> None:
+        """Switch to WAL (persistent). The switch needs an exclusive lock and SQLite does not
+        wait for it, so a concurrent first ingest would fail at once: retry for a bounded time."""
+        deadline = time.monotonic() + WAL_SWITCH_SECONDS
+        while self.conn.execute("PRAGMA journal_mode").fetchone()[0] != "wal":
+            try:
+                self.conn.execute("PRAGMA journal_mode = WAL")
+            except sqlite3.OperationalError as error:
+                if "locked" not in str(error) or time.monotonic() > deadline:
+                    raise
+                time.sleep(0.05)
+
+    def _rollback(self) -> None:
+        # SQLite may already have rolled back (e.g. on SQLITE_FULL); a second ROLLBACK would
+        # raise and hide the original error.
+        if self.conn.in_transaction:
+            self.conn.execute("ROLLBACK")
+
+    def _ensure_same_file(self) -> None:
+        """Under the write lock: the file this connection writes is still the library."""
+        try:
+            same = self.path.stat().st_ino == self._inode
+        except FileNotFoundError:
+            same = False
+        if not same:
+            raise LibraryError(
+                f"{self.path} was removed while this ingest ran (another first ingest failed and "
+                "discarded it); run the ingest again"
+            )
+
+    def discard_if_new_and_empty(self) -> bool:
+        """After a failed first ingest: delete the library if this connection created it and it
+        holds no video. Only SQLite's own files are deleted. Closes the library either way.
+
+        The check and the deletion run under the write lock; an ingest waiting for that lock
+        then finds its file gone (see `_ensure_same_file`) instead of writing into it.
+        """
+        discarded = False
+        try:
+            if self.created:
+                self.conn.execute("BEGIN IMMEDIATE")
+                if self.video_count() == 0:
+                    for suffix in SQLITE_SUFFIXES:
+                        Path(f"{self.path}{suffix}").unlink(missing_ok=True)
+                    discarded = True
+                self._rollback()
+        except (sqlite3.Error, OSError):
+            pass  # keep the library; the caller reports the original failure
+        finally:
+            self.close()
+        return discarded
 
     # --- writing -------------------------------------------------------------------------
 
@@ -192,6 +256,7 @@ class Library:
         conn = self.conn
         conn.execute("BEGIN IMMEDIATE")
         try:
+            self._ensure_same_file()
             old = [
                 r[0]
                 for r in conn.execute("SELECT id FROM passages WHERE video_id = ?", (video.id,))
@@ -228,7 +293,7 @@ class Library:
                 self._insert_passage(video, passage, vector)
             conn.execute("COMMIT")
         except BaseException:
-            conn.execute("ROLLBACK")
+            self._rollback()
             raise
 
     def _insert_passage(self, video: Video, passage: Passage, vector: np.ndarray) -> None:

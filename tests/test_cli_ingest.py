@@ -1,4 +1,5 @@
 import hashlib
+import sqlite3
 
 import pytest
 from helpers import FIXTURES, FakeEmbedder, FakeYDLFactory, load_fixture, which_all
@@ -147,6 +148,53 @@ def test_ingest_storage_failure_on_first_ingest_removes_the_new_file(tmp_path, m
     monkeypatch.setattr(Library, "_insert_passage", broken)
     assert run(["ingest", URL], tmp_path, FakeYouTube(two_hour_transcript())) == 1
     assert not list(tmp_path.glob("library.sqlite3*"))
+
+
+def test_ingest_first_ingest_failure_keeps_unrelated_sibling_files(tmp_path, monkeypatch):
+    backup = tmp_path / "library.sqlite3.bak"  # e.g. an old library moved aside
+    backup.write_bytes(b"user backup")
+
+    def broken(*args):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(Library, "_insert_passage", broken)
+    assert run(["ingest", URL], tmp_path, FakeYouTube(two_hour_transcript())) == 1
+    assert not (tmp_path / "library.sqlite3").exists()
+    assert backup.read_bytes() == b"user backup"
+
+
+@pytest.mark.parametrize(
+    "error", [OSError("disk full"), KeyboardInterrupt()], ids=["disk", "ctrl-c"]
+)
+def test_ingest_storage_failure_on_reingest_keeps_the_library(
+    filled, tmp_path, monkeypatch, capsys, error
+):
+    path, before = filled
+    capsys.readouterr()
+
+    def broken(*args):
+        raise error
+
+    monkeypatch.setattr(Library, "_insert_passage", broken)
+    again = two_hour_transcript("info_manual_and_auto.json")
+    assert run(["ingest", "https://youtu.be/abc123DEF45"], tmp_path, FakeYouTube(again)) == 1
+    assert digest(path) == before
+    if isinstance(error, KeyboardInterrupt):
+        assert "interrupted" in capsys.readouterr().err
+
+
+def test_ingest_database_error_is_a_clean_failure(filled, tmp_path, monkeypatch, capsys):
+    path, before = filled
+    capsys.readouterr()
+
+    def locked(*args):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(Library, "store", locked)
+    assert run(["ingest", URL], tmp_path, FakeYouTube(two_hour_transcript())) == 1
+    err = capsys.readouterr().err
+    assert "database is locked" in err and "Traceback" not in err
+    assert digest(path) == before
 
 
 def test_ingest_model_mismatch_refused_before_any_request(filled, tmp_path, capsys):

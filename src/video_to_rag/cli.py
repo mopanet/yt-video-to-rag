@@ -7,6 +7,7 @@ results to stdout.
 import argparse
 import logging
 import os
+import sqlite3
 import sys
 from collections.abc import Callable, Mapping
 
@@ -133,18 +134,13 @@ def _ingest(
     logger.info("embedding %d passages of %r", len(passages), video.title)
     vectors = embedder.embed_passages([p.text for p in passages])
 
-    created = not path.exists()
+    library = Library.open_for_write(path, embedder.model_name, embedder.dim)
     try:
-        library = Library.open_for_write(path, embedder.model_name, embedder.dim)
-        try:
-            library.store(video, passages, vectors)
-        finally:
-            library.close()
+        library.store(video, passages, vectors)
     except BaseException:
-        if created:  # a failed first ingest leaves no library behind
-            for leftover in path.parent.glob(f"{path.name}*"):
-                leftover.unlink(missing_ok=True)
+        library.discard_if_new_and_empty()  # a failed first ingest leaves no library behind
         raise
+    library.close()
 
     print(f'Ingested "{video.title}" — {video.channel_name}')
     print(f"  {len(passages)} passages, captions: {video.caption_kind} ({video.language})")
@@ -198,6 +194,8 @@ def main(
         return _fail(str(error), EXIT_USAGE)
     except (YouTubeError, NoCaptions, LibraryError) as error:
         return _fail(str(error))
+    except sqlite3.Error as error:
+        return _fail(f"library error: {error}")
     except OSError as error:
         return _fail(f"{type(error).__name__}: {error}")
     except KeyboardInterrupt:

@@ -1,5 +1,6 @@
 import hashlib
 import sqlite3
+import threading
 
 import pytest
 from helpers import FakeEmbedder
@@ -9,6 +10,7 @@ from video_to_rag.chunking import Passage
 from video_to_rag.library import (
     HOME_ENV,
     Library,
+    LibraryError,
     ModelMismatch,
     library_path,
 )
@@ -134,6 +136,94 @@ def test_atomic_interrupted_reingest_keeps_old_passages(tmp_path, monkeypatch):
     vector = EMBEDDER.embed_queries(["sleep matters"])[0]
     assert library.hits([pid for pid, _ in library.knn(vector, 5)])[0].text == "sleep matters"
     assert count(library, "passages") == 2
+
+
+def test_atomic_original_error_survives_an_automatic_rollback(tmp_path, monkeypatch):
+    library = open_rw(tmp_path / "library.sqlite3")
+
+    def disk_full(self, *args):
+        self.conn.execute("ROLLBACK")  # SQLite rolls back by itself on e.g. SQLITE_FULL
+        raise OSError("disk full")
+
+    monkeypatch.setattr(Library, "_insert_passage", disk_full)
+    with pytest.raises(OSError, match="disk full"):
+        store(library, video(), passages("one"))
+
+
+# --- First ingest: creation and discarding a failed one ---------------------------------
+
+
+def test_create_checks_for_the_schema_under_the_write_lock(tmp_path, monkeypatch):
+    original = Library._has_schema
+    checked_in_transaction = []
+
+    def spy(self):
+        checked_in_transaction.append(self.conn.in_transaction)
+        return original(self)
+
+    monkeypatch.setattr(Library, "_has_schema", spy)
+    first = open_rw(tmp_path / "library.sqlite3")
+    second = open_rw(tmp_path / "library.sqlite3")
+    assert (first.created, second.created) == (True, False)
+    assert checked_in_transaction == [True, True]
+
+
+@pytest.mark.parametrize("patience", [5.0, 0.0], ids=["waits", "no-patience"])
+def test_wal_switch_waits_for_a_concurrent_first_ingest(tmp_path, monkeypatch, patience):
+    monkeypatch.setattr("video_to_rag.library.WAL_SWITCH_SECONDS", patience)
+    path = tmp_path / "library.sqlite3"
+    other = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
+    other.execute("CREATE TABLE t(x)")  # a fresh file, still in rollback-journal mode
+    # The other ingest holds the write lock while it creates the schema; SQLite refuses the
+    # switch to WAL at once then (no busy wait, to avoid a deadlock).
+    other.execute("BEGIN IMMEDIATE")
+    release = threading.Timer(0.3, other.execute, ["COMMIT"])
+    release.start()
+    try:
+        if patience:
+            assert open_rw(path).created
+        else:
+            with pytest.raises(sqlite3.OperationalError, match="locked"):
+                open_rw(path)
+    finally:
+        release.join()
+        other.close()
+
+
+def test_discard_removes_only_a_new_empty_library(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    sibling = tmp_path / "library.sqlite3.bak"
+    sibling.write_bytes(b"keep")
+    library = open_rw(path)
+    assert library.discard_if_new_and_empty() is True
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["library.sqlite3.bak"]
+
+
+def test_discard_keeps_a_library_another_ingest_filled(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    first = open_rw(path)  # created it, then its own store fails
+    other = open_rw(path)
+    store(other, video(), passages("stored by the other ingest"))
+    other.close()
+    assert first.discard_if_new_and_empty() is False
+    library = Library.open_readonly(path, EMBEDDER.model_name)
+    assert library.video_count() == 1
+
+
+def test_discard_keeps_a_library_it_did_not_create(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    open_rw(path).close()
+    assert open_rw(path).discard_if_new_and_empty() is False
+    assert path.is_file()
+
+
+def test_store_into_a_removed_library_fails_loudly(tmp_path):
+    path = tmp_path / "library.sqlite3"
+    first = open_rw(path)
+    waiting = open_rw(path)  # a concurrent ingest that opened the file before it was removed
+    assert first.discard_if_new_and_empty() is True
+    with pytest.raises(LibraryError, match="removed"):
+        store(waiting, video(), passages("would be lost in a deleted file"))
 
 
 def test_store_rejects_mismatched_vectors(tmp_path):
