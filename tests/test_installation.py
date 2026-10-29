@@ -92,6 +92,14 @@ def test_commands_of_the_installed_tool(installed):
         assert command in result.stdout
 
 
+def test_installed_package_carries_the_license(installed):
+    """MIT requires the copyright notice in every copy, so the package ships LICENSE."""
+    site_packages = "tools/video-to-rag/lib/python*/site-packages"
+    (dist_info,) = installed.binary.parents[1].glob(f"{site_packages}/video_to_rag-*.dist-info")
+    shipped = dist_info / "licenses" / "LICENSE"
+    assert shipped.read_text(encoding="utf-8") == (REPO / "LICENSE").read_text(encoding="utf-8")
+
+
 def test_installed_search_outside_the_repository(installed, tmp_path):
     result = installed.run("search", "focus", "--data-dir", str(tmp_path))
     assert result.returncode == 0, result.stderr
