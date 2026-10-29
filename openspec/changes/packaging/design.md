@@ -98,16 +98,20 @@ names both directories.
 
 ### D7 — Publication is the go-live, so GATE 2 comes before the first push
 The repository is public from its first push, and that cannot be taken back. Order:
-1. `feat/video-search-skeleton` is finished and merged into local `main`; this branch is rebased
-   onto it.
+1. This branch stays stacked on `feat/video-search-skeleton`. Slice 1 is not merged into `main`
+   locally: the user reviews it as the first pull request on GitHub (the Verify phase), and the
+   packaging pull request targets that branch until then.
 2. Build, then the full gate, `/review` + `/codex`, then `/cso`, including a review of every tracked
    file for personal data (secrets are already covered by gitleaks over the full history).
 3. **GATE 2**: the user approves publishing, creates the empty public repository, and gives the
    container a repo-scoped token (`pat-set video-to-rag` on the host).
-4. Push `main`, open the pull request for this branch, CI green (this is also the first CI run),
-   merge, tag `v0.1.0` on `main`, push the tag.
-5. The user installs by hand on their machine and registers the MCP server in the Personal OS
-   (the Verify phase).
+4. Push `main` and both branches; open pull request 1 (slice 1 → `main`) and pull request 2
+   (packaging → slice 1's branch); CI green on both (the project's first CI runs).
+5. The user installs by hand from the packaging branch
+   (`uv tool install git+https://github.com/<owner>/video-to-rag@feat/packaging`), registers the
+   MCP server in the Personal OS and reviews both pull requests (the Verify phase).
+6. After pull request 1 is merged, pull request 2 is retargeted to `main` and merged; `v0.1.0` is
+   tagged on `main` and pushed.
 
 ## Risks / Trade-offs
 
