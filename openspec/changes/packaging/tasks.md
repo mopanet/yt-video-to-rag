@@ -54,11 +54,14 @@ pass it (GREEN). Iterate with `npm run gates:dev`; the full `npm run gates` runs
 
 ## 6. Integration (before GATE 2)
 
-- [ ] 6.1 Run the full `npm run gates` (lint, all tests including `model` and `install`, gitleaks,
+- [x] 6.1 Run the full `npm run gates` (lint, all tests including `model` and `install`, gitleaks,
   `openspec validate --all`); verify everything is green
-- [ ] 6.2 Pre-publication review: `/review` + `/codex`, then `/cso` including every tracked file
+- [x] 6.2 Pre-publication review: `/review` + `/codex`, then `/cso` including every tracked file
   checked for personal data, plus `gitleaks git` over the full history; verify no open finding
-  and report the result for GATE 2
+  and report the result for GATE 2 (done 2026-10-29: `/review` fixed four findings; `/cso` run
+  `1793297367896-46a0408a4b507e44` partial, no supported findings, its scanners need Docker;
+  `/codex` not run, its sandbox cannot start in the devcontainer; full-history gitleaks clean at
+  `61a4b7e`, re-run by CI on the first pull request)
 
 ## 7. Publication (after GATE 2: the user approves, creates the public repository, runs `pat-set`)
 
