@@ -10,7 +10,7 @@ import os
 import sqlite3
 import sys
 from collections.abc import Callable, Mapping
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
 from .captions import NoCaptions
 from .chunking import chunk
@@ -62,6 +62,13 @@ def _fail(message: str, code: int = EXIT_FAILURE) -> int:
     return code
 
 
+def _version() -> str:
+    try:
+        return version(PACKAGE)
+    except PackageNotFoundError:  # a bare source tree: the other commands must still work
+        return "unknown (not installed)"
+
+
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
@@ -75,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Turn YouTube captions into a searchable, citable passage library.",
         parents=[common],
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {version(PACKAGE)}")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {_version()}")
     commands = parser.add_subparsers(dest="command", metavar="<command>", required=True)
 
     ingest = commands.add_parser(

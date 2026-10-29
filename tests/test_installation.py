@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from helpers import project_version
 from mcp.client import Client
 from mcp.client.stdio import StdioServerParameters
-from test_cli_version import project_version
 
 REPO = Path(__file__).resolve().parents[1]
 # A user's shell has none of these; under `uv run` / CI they would leak into the install.
