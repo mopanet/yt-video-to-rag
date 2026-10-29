@@ -35,6 +35,9 @@ See proposal.md for why. Today's state, checked on `feat/video-search-skeleton`:
 `uv tool install git+https://github.com/<owner>/video-to-rag` installs the latest `main`;
 `…/video-to-rag@v0.1.0` installs a release tag. `pipx install git+…` works the same way (it is a
 standard wheel) and gets one line in the README.
+Every documented install command names `--python 3.12`, the Python the tests run on: without it uv
+takes whatever Python it finds or the newest it can download, and on Python 3.15 the install
+fails (checked: onnxruntime 1.31 publishes wheels up to `cp314` only, and has no sdist).
 *Alternatives:* PyPI (needs an account, name reservation and a publishing flow, which is real work for
 a tool with one user so far: later, if ever); `uvx --from git+…` as the MCP command (resolves on
 every cold start and needs the network to start the server, so the README mentions it only as a way
@@ -61,7 +64,8 @@ exact pins (stale yt-dlp, which is worse than the risk the pins avoid).
 ### D4 — Install smoke test as a pytest module with an `install` marker
 `tests/test_installation.py` builds the wheel (`uv build --wheel`) into a temporary directory once
 per session and installs it with `uv tool install`, with `UV_TOOL_DIR` and `UV_TOOL_BIN_DIR` in that
-temporary directory (the user's real tools are never touched), `XDG_DATA_HOME` and `XDG_CACHE_HOME`
+temporary directory (the user's real tools are never touched), `--python 3.12` as in the README,
+`XDG_DATA_HOME` and `XDG_CACHE_HOME`
 pointed at empty temporary directories, and the working directory outside the repository. It then
 runs the installed binary for each scenario in `specs/installation/spec.md`. For the MCP scenarios
 it uses the `mcp` client from the project's own environment to start the installed
@@ -69,8 +73,10 @@ it uses the `mcp` client from the project's own environment to start the install
 stays valid after every version bump.
 The module needs network access to PyPI and takes about a minute on a cold uv cache. It runs in
 the full gate (`npm test`, so locally and in CI). The `install` marker exists so it can be
-deselected deliberately (`-m "not install"`) when offline. `gates:dev` selects it only when its own
-file or the dependency files change, which is when packaging can break.
+deselected deliberately (`-m "not install"`) when offline. The build and install steps have a
+10-minute timeout, so a stalled download fails the test instead of hanging CI. `gates:dev`
+selects it only when its own file, the shared test helpers or the dependency files change, which
+is when packaging can break.
 *Alternatives:* a shell step in CI only (cannot be run locally the same way, and cannot go RED
 first); building in the test process with `pip` (not what users run).
 
@@ -121,9 +127,10 @@ The repository is public from its first push, and that cannot be taken back. Ord
   section says this is the first fix to try.
 - [The smoke test needs the network and adds about a minute] → only in the full gate and CI, uv
   cache keeps repeat runs short, `-m "not install"` when offline.
-- [The Python floor (`>=3.11`) is tested only by chance] → the smoke test uses whichever Python uv
-  picks (3.11 in the devcontainer, 3.12 on the CI runner); a dedicated 3.11 job is left for when a
-  user needs it.
+- [Only Python 3.12 is tested, while `requires-python` says `>=3.11`] → the README names 3.12 in
+  every install command and says 3.15 does not work yet; a test matrix over 3.11–3.14 is left for
+  when a user needs another version. `requires-python` gets no upper bound, so a future
+  onnxruntime with `cp315` wheels works without a release of ours.
 - [Process files (`.claude/`, `.agents/`, `.dev/`, `openspec/`) become public] → they are part of
   how the project is built and are meant to be shareable; the `/cso` file review in D7 confirms
   that nothing personal is in them before GATE 2.

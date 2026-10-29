@@ -17,6 +17,8 @@ from mcp.client import Client
 from mcp.client.stdio import StdioServerParameters
 
 REPO = Path(__file__).resolve().parents[1]
+PYTHON = "3.12"  # the Python the README's install command names
+BUILD_TIMEOUT = 600  # seconds; a stalled PyPI download must fail the test, not hang CI
 # A user's shell has none of these; under `uv run` / CI they would leak into the install.
 NOT_INHERITED = ("VIRTUAL_ENV", "UV_LOCKED", "UV_FROZEN", "UV_PROJECT_ENVIRONMENT", "PYTHONPATH")
 
@@ -52,10 +54,12 @@ def installed(tmp_path_factory) -> Installed:
     assert uv, "the install test needs uv on PATH"
 
     dist = root / "dist"
-    subprocess.run([uv, "build", "--wheel", "--out-dir", str(dist)], cwd=REPO, env=base, check=True)
+    build = [uv, "build", "--wheel", "--out-dir", str(dist)]
+    subprocess.run(build, cwd=REPO, env=base, check=True, timeout=BUILD_TIMEOUT)
     (wheel,) = dist.glob("*.whl")
     tools = {**base, "UV_TOOL_DIR": str(root / "tools"), "UV_TOOL_BIN_DIR": str(root / "bin")}
-    subprocess.run([uv, "tool", "install", str(wheel)], cwd=root, env=tools, check=True)
+    install = [uv, "tool", "install", "--python", PYTHON, str(wheel)]
+    subprocess.run(install, cwd=root, env=tools, check=True, timeout=BUILD_TIMEOUT)
 
     work, data, cache = root / "work", root / "data", root / "cache"
     for directory in (work, data, cache):

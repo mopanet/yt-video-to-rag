@@ -8,7 +8,7 @@ your question from those passages, with a `youtu.be` link to the exact moment an
 original words. Everything runs on your machine: no API key, no LLM inside the tool. Nothing leaves
 the machine except the YouTube requests and, once, the embedding model download.
 
-Version 0.1.0 adds one video at a time; channels and playlists are not supported yet.
+Version 0.1.0 ingests one video at a time; channels and playlists are not supported yet.
 
 ## Requirements
 
@@ -21,14 +21,19 @@ Version 0.1.0 adds one video at a time; channels and playlists are not supported
 ## Install
 
 ```bash
-uv tool install git+https://github.com/<owner>/video-to-rag          # latest main
-uv tool install git+https://github.com/<owner>/video-to-rag@v0.1.0   # a release
+uv tool install --python 3.12 git+https://github.com/<owner>/video-to-rag          # latest main
+uv tool install --python 3.12 git+https://github.com/<owner>/video-to-rag@v0.1.0   # a release
 video-to-rag --version
 ```
 
+`--python 3.12` is the tested Python; uv downloads it if your machine lacks it. Python 3.11 to
+3.14 should work as well (every dependency publishes packages for them), 3.15 does not yet:
+onnxruntime has no package for it.
+
 If the shell cannot find `video-to-rag`, run `uv tool update-shell` once and open a new terminal.
-`pipx install git+https://github.com/<owner>/video-to-rag` works as well. To try it without
-installing: `uvx --from git+https://github.com/<owner>/video-to-rag video-to-rag --help`.
+`pipx install --python python3.12 git+https://github.com/<owner>/video-to-rag` works as well. To
+try it without installing:
+`uvx --python 3.12 --from git+https://github.com/<owner>/video-to-rag video-to-rag --help`.
 
 ## Use
 
@@ -124,7 +129,7 @@ uv tool upgrade video-to-rag
 This fetches the latest commit of the branch you installed from and the newest compatible
 dependencies, including yt-dlp — the first thing to try when YouTube downloads start failing.
 An install pinned to a release stays on it; move to another release with
-`uv tool install --force git+https://github.com/<owner>/video-to-rag@<tag>`.
+`uv tool install --force --python 3.12 git+https://github.com/<owner>/video-to-rag@<tag>`.
 
 ## Uninstall
 
@@ -153,6 +158,9 @@ Toolchain: Python 3.12 via uv, pytest, Ruff; the npm scripts are the task runner
 npm test          # run the scenario tests (pytest)
 npm run gates     # Ruff check + test + secret-scan + openspec validate
 ```
+
+`npm test` includes the `install` tests, which build the package and install it the way the
+Install section does; they need PyPI access (offline: `uv run pytest -m "not install"`).
 
 Start a slice — T1 (default): just describe it; T2 (large/risky):
 ```text
