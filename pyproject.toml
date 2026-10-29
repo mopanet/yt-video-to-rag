@@ -31,7 +31,10 @@ build-backend = "uv_build"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
-markers = ["model: needs the real embedding model (downloads ~2.2 GB on first use)"]
+markers = [
+    "model: needs the real embedding model (downloads ~2.2 GB on first use)",
+    "install: builds the package and installs it with `uv tool install` (needs PyPI access)",
+]
 
 [tool.ruff]
 line-length = 100
