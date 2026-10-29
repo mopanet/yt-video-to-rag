@@ -6,6 +6,7 @@ Needs network access to PyPI (about a minute on a cold uv cache); deselect it wi
 """
 
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -74,6 +75,14 @@ def anyio_backend():
 
 
 # --- Standalone installation -------------------------------------------------------------
+
+
+def test_readme_installs_with_the_tested_python():
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    commands = re.findall(r"(?:uv tool install|uvx|pipx install)[^`\n]*", readme)
+    assert len(commands) >= 4
+    for command in commands:
+        assert re.search(rf"--python (?:python)?{re.escape(PYTHON)}\b", command), command
 
 
 def test_commands_of_the_installed_tool(installed):
