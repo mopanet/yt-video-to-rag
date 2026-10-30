@@ -67,10 +67,10 @@ pass it (GREEN). Iterate with `npm run gates:dev`; the full `npm run gates` runs
 
 - [x] 7.1 Replace `<owner>` in `README.md`, add `authors` and `[project.urls]` (repository,
   issues, changelog) to `pyproject.toml`; verify the built wheel's metadata lists the URLs
-- [ ] 7.2 Push `main`, `feat/video-search-skeleton` and this branch; open pull request 1
+- [x] 7.2 Push `main`, `feat/video-search-skeleton` and this branch; open pull request 1
   (`feat/video-search-skeleton` → `main`) and pull request 2 (this branch →
   `feat/video-search-skeleton`); verify CI (`gates.yml`) is green on both, the first CI runs of
-  the project
+  the project (done 2026-10-30: pull requests #1 and #2, CI green on both)
 - [ ] 7.3 After the user's review merges pull request 1, retarget pull request 2 to `main`, merge
   it, set the release date in `CHANGELOG.md`, tag `v0.1.0` on `main` and push the tag; verify that
   `uv tool install git+https://github.com/mopanet/yt-video-to-rag@v0.1.0` into a temp tool dir
