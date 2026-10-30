@@ -10,6 +10,15 @@ the machine except the YouTube requests and, once, the embedding model download.
 
 Version 0.1.0 ingests one video at a time; channels and playlists are not supported yet.
 
+## Responsible use
+
+video-to-rag is for your own, personal research. YouTube's Terms of Service allow downloading only
+through YouTube's own features, so fetching captions with yt-dlp goes against them: YouTube may
+block the address or the account it sees (see the separate-account advice under network modes).
+The captions remain their creators' work: keep your library to yourself, do not publish it or
+build a service on it, and quote only short passages when you share an answer. Copyright rules
+differ by country; this is not legal advice.
+
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (it installs a suitable Python
