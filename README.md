@@ -23,6 +23,9 @@ differ by country; this is not legal advice.
 
 - Linux (tested) or macOS (expected to work, not tested yet)
 - about 2.5 GB of disk for the embedding model, downloaded once on the first ingest
+- about 2.5 GB of free memory (RAM plus swap) to ingest: the loaded model takes ~1.6 GB, embedding
+  adds the rest. An ingest that ends with `Killed` ran out of memory; add swap or free some RAM.
+  The MCP server keeps the model loaded after its first search, ~1.6 GB for as long as it runs.
 - uv and a JavaScript runtime (`deno` or `node`); the install steps below set them up
 
 ## Install
