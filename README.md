@@ -30,8 +30,8 @@ differ by country; this is not legal advice.
 ## Install
 
 ```bash
-uv tool install --python 3.12 git+https://github.com/<owner>/video-to-rag          # latest main
-uv tool install --python 3.12 git+https://github.com/<owner>/video-to-rag@v0.1.0   # a release
+uv tool install --python 3.12 git+https://github.com/mopanet/yt-video-to-rag          # latest main
+uv tool install --python 3.12 git+https://github.com/mopanet/yt-video-to-rag@v0.1.0   # a release
 video-to-rag --version
 ```
 
@@ -40,9 +40,9 @@ video-to-rag --version
 onnxruntime has no package for it.
 
 If the shell cannot find `video-to-rag`, run `uv tool update-shell` once and open a new terminal.
-`pipx install --python python3.12 git+https://github.com/<owner>/video-to-rag` works as well. To
+`pipx install --python python3.12 git+https://github.com/mopanet/yt-video-to-rag` works as well. To
 try it without installing:
-`uvx --python 3.12 --from git+https://github.com/<owner>/video-to-rag video-to-rag --help`.
+`uvx --python 3.12 --from git+https://github.com/mopanet/yt-video-to-rag video-to-rag --help`.
 
 ## Use
 
@@ -138,7 +138,7 @@ uv tool upgrade video-to-rag
 This fetches the latest commit of the branch you installed from and the newest compatible
 dependencies, including yt-dlp — the first thing to try when YouTube downloads start failing.
 An install pinned to a release stays on it; move to another release with
-`uv tool install --force --python 3.12 git+https://github.com/<owner>/video-to-rag@<tag>`.
+`uv tool install --force --python 3.12 git+https://github.com/mopanet/yt-video-to-rag@<tag>`.
 
 ## Uninstall
 

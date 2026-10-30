@@ -65,7 +65,7 @@ pass it (GREEN). Iterate with `npm run gates:dev`; the full `npm run gates` runs
 
 ## 7. Publication (after GATE 2: the user approves, creates the public repository, runs `pat-set`)
 
-- [ ] 7.1 Replace `<owner>` in `README.md`, add `authors` and `[project.urls]` (repository,
+- [x] 7.1 Replace `<owner>` in `README.md`, add `authors` and `[project.urls]` (repository,
   issues, changelog) to `pyproject.toml`; verify the built wheel's metadata lists the URLs
 - [ ] 7.2 Push `main`, `feat/video-search-skeleton` and this branch; open pull request 1
   (`feat/video-search-skeleton` → `main`) and pull request 2 (this branch →
@@ -73,7 +73,7 @@ pass it (GREEN). Iterate with `npm run gates:dev`; the full `npm run gates` runs
   the project
 - [ ] 7.3 After the user's review merges pull request 1, retarget pull request 2 to `main`, merge
   it, set the release date in `CHANGELOG.md`, tag `v0.1.0` on `main` and push the tag; verify that
-  `uv tool install git+https://github.com/<owner>/video-to-rag@v0.1.0` into a temp tool dir
+  `uv tool install git+https://github.com/mopanet/yt-video-to-rag@v0.1.0` into a temp tool dir
   prints `video-to-rag 0.1.0` for `--version`
 
 ## Workflow follow-up

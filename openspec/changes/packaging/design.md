@@ -32,7 +32,7 @@ See proposal.md for why. Today's state, checked on `feat/video-search-skeleton`:
 ## Decisions
 
 ### D1 — Install from the GitHub repository, not PyPI
-`uv tool install git+https://github.com/<owner>/video-to-rag` installs the latest `main`;
+`uv tool install git+https://github.com/mopanet/yt-video-to-rag` installs the latest `main`;
 `…/video-to-rag@v0.1.0` installs a release tag. `pipx install git+…` works the same way (it is a
 standard wheel) and gets one line in the README.
 Every documented install command names `--python 3.12`, the Python the tests run on: without it uv
@@ -114,7 +114,7 @@ The repository is public from its first push, and that cannot be taken back. Ord
 4. Push `main` and both branches; open pull request 1 (slice 1 → `main`) and pull request 2
    (packaging → slice 1's branch); CI green on both (the project's first CI runs).
 5. The user installs by hand from the packaging branch
-   (`uv tool install git+https://github.com/<owner>/video-to-rag@feat/packaging`), registers the
+   (`uv tool install git+https://github.com/mopanet/yt-video-to-rag@feat/packaging`), registers the
    MCP server in the Personal OS and reviews both pull requests (the Verify phase).
 6. After pull request 1 is merged, pull request 2 is retargeted to `main` and merged; `v0.1.0` is
    tagged on `main` and pushed.
@@ -139,6 +139,6 @@ The repository is public from its first push, and that cannot be taken back. Ord
 
 ## Open Questions
 
-- The GitHub owner and repository name: they fill in the URLs in the README and in
-  `[project.urls]`, and are settled when the user creates the repository (D7 step 3). Until then
-  the README uses `<owner>`.
+- Settled at GATE 2 (2026-10-30): the repository is `mopanet/yt-video-to-rag`. The distribution,
+  the command and the data directories keep the name `video-to-rag`; only the install URLs carry
+  the repository name.

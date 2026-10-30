@@ -5,6 +5,7 @@ description = "Ask YouTube videos questions in any language; answers cite the ex
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
+authors = [{ name = "mopanet" }]
 requires-python = ">=3.11"
 dependencies = [
     "fastembed>=0.9.0,<0.10",
@@ -14,6 +15,11 @@ dependencies = [
     "sqlite-vec>=0.1.9,<0.2",
     "yt-dlp[default,secretstorage]>=2026.10.21",
 ]
+
+[project.urls]
+Repository = "https://github.com/mopanet/yt-video-to-rag"
+Issues = "https://github.com/mopanet/yt-video-to-rag/issues"
+Changelog = "https://github.com/mopanet/yt-video-to-rag/blob/main/CHANGELOG.md"
 
 [project.scripts]
 video-to-rag = "video_to_rag.cli:main"
