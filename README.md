@@ -21,25 +21,52 @@ differ by country; this is not legal advice.
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (it installs a suitable Python
-  by itself)
-- a JavaScript runtime on `PATH` for YouTube: `deno` (preferred) or `node`
-- about 2.5 GB of disk for the embedding model, downloaded once on the first ingest
 - Linux (tested) or macOS (expected to work, not tested yet)
+- about 2.5 GB of disk for the embedding model, downloaded once on the first ingest
+- uv and a JavaScript runtime (`deno` or `node`); the install steps below set them up
 
 ## Install
 
-```bash
-uv tool install --python 3.12 git+https://github.com/mopanet/yt-video-to-rag          # latest main
-uv tool install --python 3.12 git+https://github.com/mopanet/yt-video-to-rag@v0.1.0   # a release
-video-to-rag --version
-```
+1. **uv**, the Python package manager (it installs a suitable Python by itself):
+
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+   Then open a new terminal (or run `source $HOME/.local/bin/env`) so that `uv` is on `PATH`.
+   macOS with Homebrew: `brew install uv`; other ways are in
+   [uv's installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+2. **A JavaScript runtime**, which yt-dlp needs to read YouTube: `deno` (preferred) or `node`, on
+   `PATH`. Skip this step if `deno --version` or `node --version` already works; otherwise:
+
+   ```bash
+   curl -fsSL https://deno.land/install.sh | sh   # needs unzip (Debian/Ubuntu: sudo apt install unzip)
+   ```
+
+   The installer asks whether to add deno to your `PATH`: answer yes. macOS: `brew install deno`.
+
+3. **video-to-rag**:
+
+   ```bash
+   uv tool install --python 3.12 git+https://github.com/mopanet/yt-video-to-rag          # latest main
+   uv tool install --python 3.12 git+https://github.com/mopanet/yt-video-to-rag@v0.1.0   # a release
+   ```
+
+4. **Check** it in a new terminal:
+
+   ```bash
+   video-to-rag --version   # video-to-rag 0.1.0
+   deno --version           # or: node --version
+   ```
+
+   If the shell cannot find `video-to-rag`, run `uv tool update-shell` once and open a new
+   terminal again.
 
 `--python 3.12` is the tested Python; uv downloads it if your machine lacks it. Python 3.11 to
 3.14 should work as well (every dependency publishes packages for them), 3.15 does not yet:
 onnxruntime has no package for it.
 
-If the shell cannot find `video-to-rag`, run `uv tool update-shell` once and open a new terminal.
 `pipx install --python python3.12 git+https://github.com/mopanet/yt-video-to-rag` works as well. To
 try it without installing:
 `uvx --python 3.12 --from git+https://github.com/mopanet/yt-video-to-rag video-to-rag --help`.
@@ -70,6 +97,38 @@ to confirm you're not a bot" (typical from cloud or VPN addresses):
   that proxy (credentials go in the URL, `http://user:password@host:port`, with reserved
   characters percent-encoded, e.g. `/` as `%2F`; they are masked in every message). The proxy is
   never a command-line option.
+
+#### Cookies that keep working
+
+YouTube replaces the cookies of an open YouTube tab every so often as a security measure, and a
+file exported from that tab stops working (the error then ends with "Cookies were sent, so they
+may be expired"). Export them from a session that is never opened again
+([yt-dlp's method](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)):
+
+1. Open a new private (incognito) window and log in to YouTube, preferably with a separate Google
+   account.
+2. In the same tab, open `https://www.youtube.com/robots.txt`. This must be the only private tab.
+3. Export the `youtube.com` cookies with a cookies.txt extension, such as
+   [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+   for Chrome or [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) for
+   Firefox (allow it in private windows), then **close the private window**. yt-dlp's own
+   `--cookies-from-browser … --cookies …` export does not work here: it reads the regular browser
+   profile, not the private session.
+4. Keep the file where only you can read it, and delete the export from the downloads folder:
+
+   ```bash
+   mkdir -p ~/.config/video-to-rag && chmod 700 ~/.config/video-to-rag
+   mv ~/Downloads/<exported file>.txt ~/.config/video-to-rag/cookies.txt
+   chmod 600 ~/.config/video-to-rag/cookies.txt
+   video-to-rag ingest "https://www.youtube.com/watch?v=<video-id>" --cookies ~/.config/video-to-rag/cookies.txt
+   ```
+
+   For a server, create the directory there the same way, copy the file over with
+   `scp <exported file>.txt <user>@<server>:~/.config/video-to-rag/cookies.txt`, and run
+   `chmod 600` on it there.
+
+When the bot check stays even with freshly exported cookies, YouTube is blocking the machine's
+address: route the requests through a proxy with `VIDEO_TO_RAG_PROXY`.
 
 ### Search
 
@@ -113,6 +172,9 @@ claude mcp list   # video-to-rag: ... ✓ Connected
 
 - Ingest at least one video before the first question: that also downloads the embedding model,
   which would take far too long inside a tool call.
+- Run `ingest` and the MCP server as the same user: the library and the model cache live in that
+  user's home directory (see below), so a client started as another user (for example `root`
+  versus your own account) finds an empty library and no model.
 - The first search after the server starts loads the model (a few seconds, up to ~15 s cold);
   later ones are fast.
 - To serve another library, add `--data-dir <dir>` to the arguments, or set `VIDEO_TO_RAG_HOME`
