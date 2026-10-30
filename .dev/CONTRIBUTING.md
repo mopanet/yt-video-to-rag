@@ -20,6 +20,7 @@ This repo follows the risk-tiered, two-gate workflow (see `CLAUDE.md` and `.dev/
 reverse → T2. When unsure, escalate one tier. A T1 that grows mid-build re-opens GATE 1 as T2.
 
 ## Rules
+- Toolchain: Python via uv, pytest, Ruff — always through the `npm run …` entry points.
 - Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`).
 - One slice = one branch = one PR. Protected `main`, no `develop`.
 - Every behavior change gets a test before merge (T2: test-first, RED→GREEN).

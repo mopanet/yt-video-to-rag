@@ -1,0 +1,41 @@
+[project]
+name = "video-to-rag"
+version = "0.0.0"
+description = "Ask YouTube videos questions in any language; answers cite the exact passage and moment."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "fastembed>=0.9.0",
+    "mcp>=2.3.0",
+    "numpy>=2.4.6",
+    "platformdirs>=4.13.5",
+    "sqlite-vec>=0.1.9",
+    "yt-dlp[default,secretstorage]>=2026.10.21",
+]
+
+[project.scripts]
+video-to-rag = "video_to_rag.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = ["model: needs the real embedding model (downloads ~2.2 GB on first use)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
