@@ -4,16 +4,22 @@ import hashlib
 import io
 import json
 import re
+import tomllib
 from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
 
 FIXTURES = Path(__file__).parent / "fixtures"
+PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
 
 def load_fixture(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def project_version() -> str:
+    return tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]["version"]
 
 
 class FakeEmbedder:

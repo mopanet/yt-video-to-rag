@@ -2113,7 +2113,7 @@ wheels = [
 
 [[package]]
 name = "video-to-rag"
-version = "0.0.0"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastembed" },
@@ -2134,11 +2134,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastembed", specifier = ">=0.9.0" },
-    { name = "mcp", specifier = ">=2.3.0" },
-    { name = "numpy", specifier = ">=2.4.6" },
-    { name = "platformdirs", specifier = ">=4.13.5" },
-    { name = "sqlite-vec", specifier = ">=0.1.9" },
+    { name = "fastembed", specifier = ">=0.9.0,<0.10" },
+    { name = "mcp", specifier = ">=2.3.0,<3" },
+    { name = "numpy", specifier = ">=2.4.6,<3" },
+    { name = "platformdirs", specifier = ">=4.13.5,<5" },
+    { name = "sqlite-vec", specifier = ">=0.1.9,<0.2" },
     { name = "yt-dlp", extras = ["default", "secretstorage"], specifier = ">=2026.10.21" },
 ]
 
