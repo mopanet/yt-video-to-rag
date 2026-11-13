@@ -7,3 +7,17 @@ coverage/
 dist/
 build/
 .worktrees/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.sqlite3
+
+# Credentials: YouTube cookie exports, and files handed over with `devup paste`
+*cookies*.txt
+*.cookies
+.dev/inbox/
+!tests/fixtures/netscape_cookies.txt

@@ -1,7 +1,7 @@
 name: gates
 
 # Machine gates behind the protected main: runs the same as `npm run gates`
-# locally — Biome (lint+format), tests, gitleaks, OpenSpec validate.
+# locally — Ruff (lint+format), pytest, gitleaks, OpenSpec validate.
 
 on:
   pull_request:
@@ -14,6 +14,12 @@ permissions:
 jobs:
   gates:
     runs-on: ubuntu-latest
+    env:
+      # Tests marked `model` download the ~2.2 GB embedding model; they run locally only.
+      PYTEST_ADDOPTS: -m "not model"
+      # Every `uv run` uses the committed uv.lock and fails if it is out of date (instead of
+      # re-resolving), so CI tests exactly what the lock pins.
+      UV_LOCKED: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,16 +29,17 @@ jobs:
         with:
           node-version: 22
 
+      - uses: astral-sh/setup-uv@v10.3.2 # setup-uv publishes no floating major tag after v7
+
       - name: Install gate tools
         run: |
-          npm install -g @biomejs/biome @fission-ai/openspec
+          npm install -g @fission-ai/openspec
           GL_VER=8.24.3
           curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VER}/gitleaks_${GL_VER}_linux_x64.tar.gz" \
             | sudo tar xz -C /usr/local/bin/ gitleaks
 
-      - name: Install deps (if any)
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - name: Install deps
+        run: uv sync --locked
 
       - name: Run gates
         run: npm run gates

@@ -1,0 +1,320 @@
+"""yt-dlp adapter: metadata + caption download, network options, error mapping.
+
+One `YoutubeDL` session per fetch carries the cookies and the proxy for every request (metadata
+and caption file alike). yt-dlp is driven through its Python API, so credentials never appear
+on a command line, and its options dict is never logged.
+"""
+
+import argparse
+import contextlib
+import io
+import json
+import re
+import shutil
+import warnings
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+from yt_dlp.cookies import SUPPORTED_BROWSERS, YoutubeDLCookieJar
+from yt_dlp.utils import YoutubeDLError
+
+from .captions import Transcript, parse_json3, select_track, video_from_info
+from .redact import logger, redact
+
+PROXY_ENV = "VIDEO_TO_RAG_PROXY"
+PROXY_SCHEMES = ("http", "https", "socks4", "socks4a", "socks5", "socks5h")
+MIN_SECRET_LENGTH = 4  # shorter credentials would mask ordinary words; their URL is masked anyway
+JS_RUNTIMES = ("deno", "node")  # in order of preference
+UNAVAILABLE_MARKERS = (
+    "private video",
+    "video unavailable",
+    "members-only",
+    "members only",
+    "removed",
+    "confirm your age",
+    "available in your country",
+    "not available from your location",
+)
+# yt-dlp's rate-limit reason starts with "Video unavailable", so this is checked first.
+RATE_LIMIT_MARKERS = ("try again later", "rate-limited", "http error 429", "too many requests")
+PREFIX_RE = re.compile(r"^(?:ERROR:\s*)?(?:\[\w+\]\s*)?(?:[\w-]{11}:\s*)?")
+
+BLOCKED_MESSAGE = (
+    'YouTube blocked the request with its bot check ("Sign in to confirm you\'re not a bot"). '
+    "This typically happens from cloud or VPN addresses. Remedies: --cookies-from-browser "
+    "<browser>[:<profile>] (a browser profile logged in to YouTube; a separate Google account is "
+    "recommended), --cookies <file> (a Netscape-format cookie file), or set VIDEO_TO_RAG_PROXY "
+    "to a proxy URL."
+)
+EXPIRED_HINT = (
+    " Cookies were sent, so they may be expired: export fresh cookies from a logged-in browser, "
+    "or use VIDEO_TO_RAG_PROXY."
+)
+
+
+class YouTubeError(Exception):
+    """A YouTube request failed; the message is already redacted."""
+
+
+class Blocked(YouTubeError):
+    """YouTube answered with its bot check."""
+
+
+class Unavailable(YouTubeError):
+    """The video is private, deleted, members-only or otherwise unavailable."""
+
+
+class RateLimited(YouTubeError):
+    """YouTube refuses this session for a while; the video itself may be fine."""
+
+
+class InvalidProxy(ValueError):
+    """VIDEO_TO_RAG_PROXY is not a proxy URL (a usage error); the message never shows it."""
+
+
+@dataclass(frozen=True)
+class CookieFile:
+    """A checked Netscape cookie file: read once, so yt-dlp gets exactly what was checked."""
+
+    path: str
+    text: str = field(repr=False)
+
+
+@dataclass(frozen=True)
+class Network:
+    cookies_from_browser: tuple[str, str | None] | None = None  # (browser, profile)
+    cookie_file: CookieFile | None = None
+    proxy: str | None = None  # only ever from VIDEO_TO_RAG_PROXY
+
+    @property
+    def uses_cookies(self) -> bool:
+        return bool(self.cookies_from_browser or self.cookie_file)
+
+
+def _browser(value: str) -> tuple[str, str | None]:
+    name, _, profile = value.partition(":")
+    name = name.strip().lower()
+    if name not in SUPPORTED_BROWSERS:
+        raise argparse.ArgumentTypeError(
+            f"unsupported browser {name!r}; supported: {', '.join(sorted(SUPPORTED_BROWSERS))}"
+        )
+    return name, profile.strip() or None
+
+
+def _cookie_problem(text: str) -> str | None:
+    """Why yt-dlp could not load this cookie file, or None. Never quotes the file.
+
+    yt-dlp prints every line it skips, cookie value included, straight to stderr, and the
+    standard library puts a rejected line into its error message; so the file is checked here,
+    with yt-dlp's own loader and its output swallowed, before yt-dlp ever sees it.
+    """
+    bad = [
+        n
+        for n, line in enumerate(text.splitlines(), start=1)
+        if (entry := line.removeprefix("#HttpOnly_")).strip()
+        and not entry.startswith("#")
+        and len(entry.split("\t")) != 7
+    ]
+    if bad:
+        return f"line {', '.join(map(str, bad[:5]))} is not 7 tab-separated fields"
+    swallowed = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(swallowed), warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            YoutubeDLCookieJar(io.StringIO(text)).load()
+    except Exception:
+        return "its entries are not valid cookie-file entries"
+    if swallowed.getvalue():
+        return "some of its entries are not valid cookie-file entries"
+    return None
+
+
+def _cookie_file(value: str) -> CookieFile:
+    try:
+        text = Path(value).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise argparse.ArgumentTypeError(f"cookie file not found: {value}") from None
+    except (OSError, UnicodeDecodeError):
+        raise argparse.ArgumentTypeError(f"cookie file not readable as text: {value}") from None
+    if problem := _cookie_problem(text):
+        raise argparse.ArgumentTypeError(
+            f"{value} is not a Netscape-format cookie file: {problem} "
+            "(its contents are never shown)"
+        )
+    return CookieFile(value, text)
+
+
+def add_network_arguments(parser: argparse.ArgumentParser) -> None:
+    """The cookie options (mutually exclusive). The proxy is deliberately not an option."""
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--cookies-from-browser",
+        metavar="BROWSER[:PROFILE]",
+        type=_browser,
+        help="send the YouTube cookies of that browser profile (e.g. firefox, chrome:Default)",
+    )
+    group.add_argument(
+        "--cookies",
+        metavar="FILE",
+        type=_cookie_file,
+        help="send the cookies from a Netscape-format cookie file",
+    )
+
+
+def _check_proxy(value: str) -> str:
+    """A well-formed proxy URL, so that every message can mask its credentials.
+
+    Without a scheme yt-dlp still uses the proxy but nothing recognises the credentials in its
+    messages; a raw "/", "?" or "#" in the password splits the URL in the wrong place.
+    """
+    try:
+        parts = urlsplit(value)
+        parts.port  # noqa: B018 -- raises ValueError for a port that is not a number
+    except ValueError:
+        parts = None
+    if (
+        parts is None
+        or parts.scheme.lower() not in PROXY_SCHEMES
+        or not parts.hostname
+        or parts.path not in ("", "/")
+        or parts.query
+        or parts.fragment
+        or any(c.isspace() for c in value)
+    ):
+        raise InvalidProxy(
+            f"{PROXY_ENV} is not a proxy URL: expected scheme://host:port (with user:password@ "
+            f"before the host for a login), scheme one of {', '.join(PROXY_SCHEMES)}, and reserved "
+            "characters in the user name and password percent-encoded (e.g. / as %2F). "
+            "Its value is not shown."
+        )
+    return value
+
+
+def network_from(args: argparse.Namespace, environ: Mapping[str, str]) -> Network:
+    proxy = (environ.get(PROXY_ENV) or "").strip() or None
+    return Network(
+        cookies_from_browser=args.cookies_from_browser,
+        cookie_file=args.cookies,
+        proxy=_check_proxy(proxy) if proxy else None,
+    )
+
+
+def _proxy_display(proxy: str) -> str:
+    """scheme://host:port, without any credentials."""
+    parts = urlsplit(proxy)
+    host = f"[{parts.hostname}]" if ":" in (parts.hostname or "") else parts.hostname
+    return f"{parts.scheme}://{host}" + (f":{parts.port}" if parts.port else "")
+
+
+def _proxy_secrets(proxy: str | None) -> tuple[str, ...]:
+    """The proxy's credentials as they may appear in messages: raw and percent-decoded."""
+    if not proxy:
+        return ()
+    parts = urlsplit(proxy)
+    userinfo = parts.netloc.rpartition("@")[0]
+    user, password = parts.username or "", parts.password or ""
+    candidates = {userinfo, unquote(userinfo), user, unquote(user), password, unquote(password)}
+    return tuple(s for s in candidates if len(s) >= MIN_SECRET_LENGTH)
+
+
+class _YtDlpLogger:
+    """Routes yt-dlp's messages through our redacting logger; its errors come back as exceptions."""
+
+    def __init__(self, secrets: tuple[str, ...] = ()):
+        self._secrets = secrets
+
+    def debug(self, msg: str) -> None:
+        pass
+
+    def info(self, msg: str) -> None:
+        pass
+
+    def warning(self, msg: str) -> None:
+        logger.warning("yt-dlp: %s", redact(msg, self._secrets))
+
+    def error(self, msg: str) -> None:
+        logger.debug("yt-dlp: %s", redact(msg, self._secrets))
+
+
+def _default_factory() -> Callable[[dict], object]:
+    from yt_dlp import YoutubeDL
+
+    return YoutubeDL
+
+
+class YouTube:
+    def __init__(
+        self,
+        network: Network,
+        *,
+        ydl_factory: Callable[[dict], object] | None = None,
+        which: Callable[[str], str | None] = shutil.which,
+    ):
+        self.network = network
+        self._factory = ydl_factory
+        self._which = which
+        self._secrets = _proxy_secrets(network.proxy)
+
+    def _params(self) -> dict:
+        params = {
+            "quiet": True,
+            "noprogress": True,
+            "skip_download": True,
+            "noplaylist": True,
+            # A single-file format, so yt-dlp does not warn about ffmpeg for a merge that never
+            # happens. Never set ignore_no_formats_error: it turns the bot check, "Private video"
+            # and the other playability errors into warnings.
+            "format": "bestaudio/best",
+            "logger": _YtDlpLogger(self._secrets),
+        }
+        runtime = next(((n, p) for n in JS_RUNTIMES if (p := self._which(n))), None)
+        if runtime:
+            params["js_runtimes"] = {runtime[0]: {"path": runtime[1]}}
+        else:
+            logger.warning(
+                "warning: no JavaScript runtime found on PATH; YouTube access needs deno "
+                "(preferred) or node. Trying anyway."
+            )
+        if self.network.cookies_from_browser:
+            browser, profile = self.network.cookies_from_browser
+            params["cookiesfrombrowser"] = (browser, profile, None, None)
+        if self.network.cookie_file:
+            # An in-memory copy: yt-dlp saves the jar back on close, which would rewrite the
+            # user's credential file (and fail on a read-only one).
+            params["cookiefile"] = io.StringIO(self.network.cookie_file.text)
+        # "" is yt-dlp's "no proxy"; without the key it would use HTTP(S)_PROXY / ALL_PROXY.
+        params["proxy"] = self.network.proxy or ""
+        return params
+
+    def fetch(self, video_id: str) -> Transcript:
+        """Metadata and the spoken-language captions of one video (raises NoCaptions)."""
+        factory = self._factory or _default_factory()
+        try:
+            with factory(self._params()) as ydl:
+                url = f"https://www.youtube.com/watch?v={video_id}"
+                info = ydl.extract_info(url, download=False)
+                track = select_track(info)
+                with ydl.urlopen(track.url) as response:
+                    raw = response.read()
+        except YoutubeDLError as error:
+            raise self._map_error(str(error)) from None
+        try:
+            segments = parse_json3(json.loads(raw))
+        except (ValueError, KeyError, TypeError, AttributeError, RecursionError, OverflowError):
+            raise YouTubeError("YouTube returned captions that could not be read") from None
+        return Transcript(video=video_from_info(info, track), segments=segments)
+
+    def _map_error(self, text: str) -> YouTubeError:
+        said = PREFIX_RE.sub("", text.strip())
+        lowered = said.lower()  # classify what YouTube said; a masked credential could hide a word
+        reason = redact(said, self._secrets)
+        if "confirm you" in lowered and "not a bot" in lowered:
+            return Blocked(BLOCKED_MESSAGE + (EXPIRED_HINT if self.network.uses_cookies else ""))
+        if any(marker in lowered for marker in RATE_LIMIT_MARKERS):
+            return RateLimited(f"YouTube rate-limited this session; try again later: {reason}")
+        if any(marker in lowered for marker in UNAVAILABLE_MARKERS):
+            return Unavailable(f"the video is unavailable: {reason}")
+        via = f" (via proxy {_proxy_display(self.network.proxy)})" if self.network.proxy else ""
+        return YouTubeError(f"YouTube request failed: {reason}{via}")
